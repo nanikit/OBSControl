@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/Zingabopp/OBSControl</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <Description>A Beat Saber mod to automatically start/stop recording in OBS when you play a song.</Description>
-    <TargetFramework>net472</TargetFramework>
+    <TargetFramework>net48</TargetFramework>
     <!--<PathMap Condition="'$(SolutionDir)' != ''">$(SolutionDir)=C:\</PathMap>-->
     <DebugType>portable</DebugType>
     <BeatSaberReferences>..\Refs</BeatSaberReferences>
