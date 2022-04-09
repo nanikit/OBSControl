@@ -1,5 +1,5 @@
 ﻿using BS_Utils.Utilities;
-using IPA.Utilities;
+
 using OBSControl.HarmonyPatches;
 using OBSControl.UI;
 using OBSControl.Utilities;
@@ -92,7 +92,7 @@ namespace OBSControl.OBSComponents
         {
             get
             {
-                if(!(ControlScreenCoordinator.Instance?.ControlScreen?.EnableAutoRecord ?? true))
+                if (!(ControlScreenCoordinator.Instance?.ControlScreen?.EnableAutoRecord ?? true))
                 {
                     return RecordStartOption.None;
                 }
@@ -169,6 +169,8 @@ namespace OBSControl.OBSComponents
         public DateTime LastRecordingStateUpdate { get; protected set; }
         public bool WaitingToStop { get; private set; }
         public Task? StopRecordingTask { get; private set; }
+        public Task? StartRecordingTask { get; private set; }
+        private SemaphoreSlim _semaphore = new(1);
 
         /// <summary>
         /// Source that started current/last recording.
@@ -179,56 +181,60 @@ namespace OBSControl.OBSComponents
             return dateTime.ToString(DefaultDateTimeFormat);
         }
 
+        private AsyncEventListener<OutputState, OutputState> RecordingStartedListener = new AsyncEventListener<OutputState, OutputState>((s, e) =>
+        {
+            if (e == OutputState.Started)
+                return new EventListenerResult<OutputState>(e, true);
+            return new EventListenerResult<OutputState>(e, false);
+        }, 5000);
+
         private AsyncEventListener<OutputState, OutputState> RecordingStoppedListener = new AsyncEventListener<OutputState, OutputState>((s, e) =>
         {
             if (e == OutputState.Stopped)
                 return new EventListenerResult<OutputState>(e, true);
             return new EventListenerResult<OutputState>(e, false);
-
         }, 5000);
 
         public async Task TryStartRecordingAsync(RecordActionSourceType startType, RecordStartOption recordStartOption, bool forceStopPrevious = false, string? fileFormat = null)
         {
-            OBSWebsocket? obs = Obs.GetConnectedObs();
             Logger.log?.Debug($"TryStartRecording");
+
+            if (StartRecordingTask != null)
+            {
+                Logger.log?.Info($"Recording start already in progress, await previous task.");
+                await StartRecordingTask.ConfigureAwait(false);
+                return;
+            }
+
+            try
+            {
+                StartRecordingTask = TryStartRecordingInner(startType, recordStartOption, forceStopPrevious, fileFormat);
+                await StartRecordingTask.ConfigureAwait(false);
+            }
+            finally
+            {
+                StartRecordingTask = null;
+            }
+        }
+
+        private async Task TryStartRecordingInner(RecordActionSourceType startType, RecordStartOption recordStartOption, bool forceStopPrevious, string? fileFormat)
+        {
+            OBSWebsocket? obs = Obs.GetConnectedObs();
             if (obs == null)
             {
                 Logger.log?.Error($"Unable to start recording, obs instance not found.");
                 return;
             }
-            if (OutputState == OutputState.Stopping)
-            {
-                await Task.Delay(1000).ConfigureAwait(false);
-            }
+
             if (OutputState == OutputState.Started || OutputState == OutputState.Starting)
             {
                 if (forceStopPrevious)
                 {
-                    RecordingStoppedListener.Reset();
-                    Obs.RecordingStateChanged += RecordingStoppedListener.OnEvent;
-                    RecordingStoppedListener.StartListening();
-                    try
-                    {
-                        Logger.log?.Info($"Stopping current recording to start a new one.");
-                        await obs.StopRecording().ConfigureAwait(false);
-                        if (OutputState == OutputState.Stopped)
-                            RecordingStoppedListener.TrySetResult(OutputState.Stopped);
-                        await RecordingStoppedListener.Task;
-                        Logger.log?.Debug($"Recording stopped.");
-                        await Task.Delay(100).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.log?.Warn($"Cannot stop recording: {ex.Message}");
-                    }
-                    finally
-                    {
-                        RecordingStoppedListener.TrySetCanceled();
-                    }
+                    await TryStopRecordingAsync(CancellationToken.None).ConfigureAwait(false);
                 }
                 else
                 {
-                    Logger.log?.Warn($"Cannot start recording, already started.");
+                    Logger.log?.Warn($"Cannot stop recording, already {OutputState}.");
                     return;
                 }
             }
@@ -238,12 +244,12 @@ namespace OBSControl.OBSComponents
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 Logger.log?.Error($"Error getting recording folder from OBS: {ex.Message}");
                 Logger.log?.Debug(ex);
                 return;
             }
-#pragma warning restore CA1031 // Do not catch general exception types
 
             if (fileFormat == null || fileFormat.Length == 0)
             {
@@ -257,7 +263,7 @@ namespace OBSControl.OBSComponents
                 if (tries > 0)
                 {
                     Logger.log?.Debug($"({tries}) Failed to set OBS's FilenameFormatting to {fileFormat} retrying in 50ms");
-                    await Task.Delay(50);
+                    await Task.Delay(50).ConfigureAwait(false);
                 }
                 tries++;
                 try
@@ -265,7 +271,6 @@ namespace OBSControl.OBSComponents
                     await obs.SetFilenameFormatting(fileFormat).ConfigureAwait(false);
                     currentFormat = await obs.GetFilenameFormatting().ConfigureAwait(false);
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)
                 {
                     Logger.log?.Error($"Error getting current filename format from OBS: {ex.Message}");
@@ -273,18 +278,37 @@ namespace OBSControl.OBSComponents
                 }
             } while (currentFormat != fileFormat && tries < 10);
             CurrentFileFormat = fileFormat;
+
             try
             {
+                Logger.log?.Debug($"Start recording from {RecordStartSource}. Planned Stop type: {RecordStopOption}");
                 RecordStartSource = startType;
                 // RecordStartOption = recordStartOption;
+
+                var interval = LastRecordingStateUpdate - DateTime.Now + new TimeSpan(0, 0, 0, 0, 500);
+                if (interval.TotalMilliseconds > 0)
+                {
+                    Logger.log?.Debug($"Delay start by {interval} due to obs-websocket overload.");
+                    await Task.Delay(interval).ConfigureAwait(false);
+                }
+
+                RecordingStartedListener.Reset();
+                Obs.RecordingStateChanged += RecordingStartedListener.OnEvent;
+                RecordingStartedListener.StartListening();
+
                 await obs.StartRecording().ConfigureAwait(false);
+                if (OutputState != OutputState.Started)
+                {
+                    await RecordingStartedListener.Task.ConfigureAwait(false);
+                }
+
                 RecordStopOption = recordStartOption switch
                 {
                     RecordStartOption.None => RecordStopOption.None,
                     RecordStartOption.SceneSequence => RecordStopOption.SceneSequence,
                     _ => Plugin.config?.RecordStopOption ?? RecordStopOption.ResultsView
                 };
-                Logger.log?.Info($"Recording started from {RecordStartSource}. Planned Stop type: {RecordStopOption}");
+                Logger.log?.Info($"Recording started.");
             }
             catch (Exception ex)
             {
@@ -297,7 +321,6 @@ namespace OBSControl.OBSComponents
                 Logger.log?.Error($"Error starting recording in OBS: {ex.Message}");
                 Logger.log?.Debug(ex);
             }
-#pragma warning restore CA1031 // Do not catch general exception types
         }
 
         public async Task<string[]> GetAvailableScenes()
@@ -366,6 +389,13 @@ namespace OBSControl.OBSComponents
 
         public async Task TryStopRecordingAsync(CancellationToken cancellationToken)
         {
+            if (StopRecordingTask != null)
+            {
+                Logger.log?.Info($"Recording stop already in progress, await previous task.");
+                await StopRecordingTask.ConfigureAwait(false);
+                return;
+            }
+
             OBSWebsocket? obs = Obs.GetConnectedObs();
             if (obs == null)
             {
@@ -375,10 +405,10 @@ namespace OBSControl.OBSComponents
             try
             {
                 using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, RecordStopCancellationSource.Token);
-                WaitingToStop = true;
                 //RenameStringOverride = renameTo;
                 Logger.log?.Info($"Attempting to stop recording.");
-                await obs.StopRecording(cts.Token).ConfigureAwait(false);
+                StopRecordingTask = ForceStopPrevious(obs, cts.Token);
+                await StopRecordingTask.ConfigureAwait(false);
                 recordingCurrentLevel = false;
             }
             catch (OperationCanceledException)
@@ -400,7 +430,6 @@ namespace OBSControl.OBSComponents
 #pragma warning restore CA1031 // Do not catch general exception types
             finally
             {
-                WaitingToStop = false;
                 StopRecordingTask = null;
             }
         }
@@ -657,6 +686,33 @@ namespace OBSControl.OBSComponents
                 Logger.log?.Debug($"RecordingController: RecordStopOption: {RecordStopOption}.");
                 if (RecordStopOption == RecordStopOption.SceneSequence)
                     await TryStopRecordingAsync(cts.Token);
+            }
+        }
+
+        private async Task ForceStopPrevious(OBSWebsocket obs, CancellationToken? cancellationToken = null)
+        {
+            try
+            {
+                RecordingStoppedListener.Reset();
+                Obs.RecordingStateChanged += RecordingStoppedListener.OnEvent;
+                RecordingStoppedListener.StartListening();
+
+                Logger.log?.Info($"Stopping current recording to start a new one.");
+                await obs.StopRecording(cancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                if (OutputState != OutputState.Stopped)
+                {
+                    await RecordingStoppedListener.Task.ConfigureAwait(false);
+                }
+                Logger.log?.Debug($"Recording stopped.");
+            }
+            catch (Exception ex)
+            {
+                Logger.log?.Warn($"Cannot stop recording: {ex.Message}");
+            }
+            finally
+            {
+                Obs.RecordingStateChanged -= RecordingStoppedListener.OnEvent;
+                RecordingStoppedListener.TrySetCanceled();
             }
         }
 

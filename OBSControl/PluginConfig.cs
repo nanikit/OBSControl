@@ -28,6 +28,9 @@ namespace OBSControl
         [UIValue(nameof(EnableAutoRecord))]
         public virtual bool EnableAutoRecord { get; set; } = true;
 
+        [UIValue(nameof(EnableAutoRecordLobby))]
+        public virtual bool EnableAutoRecordLobby { get; set; } = false;
+
         [UseConverter(typeof(EnumConverter<RecordStartOption>))]
         [UIValue(nameof(RecordStartOption))]
         public virtual RecordStartOption RecordStartOption

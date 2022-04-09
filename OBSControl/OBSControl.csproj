@@ -19,7 +19,7 @@
     <BeatSaberReferences>..\Refs</BeatSaberReferences>
     <BeatSaberDir>$(BeatSaberReferences)</BeatSaberDir>
     <RuntimeIdentifiers>win</RuntimeIdentifiers>
-    <LangVersion>8.0</LangVersion>
+    <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>
     <DisableCopyToPlugins>false</DisableCopyToPlugins>
     <VersionType>Unofficial</VersionType>

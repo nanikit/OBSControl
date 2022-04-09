@@ -113,9 +113,9 @@ namespace OBSControl.UI
             RecordButtonInteractable = true;
             CoroutineRunning = false;
         }
-#endregion
+        #endregion
 
-#region Actions
+        #region Actions
 
         [UIAction(nameof(StartRecording))]
         public async void StartRecording()
@@ -170,6 +170,18 @@ namespace OBSControl.UI
             }
         }
 
+        [UIValue(nameof(EnableAutoRecordLobby))]
+        public bool EnableAutoRecordLobby
+        {
+            get { return Plugin.config.EnableAutoRecordLobby; }
+            set
+            {
+                if (Plugin.config.EnableAutoRecordLobby == value) return;
+                Logger.log?.Debug($"EnableAutoRecordLobby: {value}");
+                Plugin.config.EnableAutoRecordLobby = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         #endregion
 
@@ -187,7 +199,7 @@ namespace OBSControl.UI
             };
         }
 
-#region Event Handlers
+        #region Event Handlers
         private void OnRecordingStateChanged(object sender, OutputState e)
         {
             HMMainThreadDispatcher.instance.Enqueue(() =>
@@ -203,6 +215,6 @@ namespace OBSControl.UI
                     IsRecording = false;
             });
         }
-#endregion
+        #endregion
     }
 }

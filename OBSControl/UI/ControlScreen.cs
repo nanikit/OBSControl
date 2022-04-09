@@ -82,8 +82,11 @@ namespace OBSControl.UI
 
         private void OnConfigPropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(Plugin.config.EnableAutoRecord))
+            if (e.PropertyName == nameof(Plugin.config.EnableAutoRecord) ||
+                e.PropertyName == nameof(Plugin.config.EnableAutoRecordLobby))
+            {
                 NotifyPropertyChanged(nameof(EnableAutoRecord));
+            }
         }
 
         protected void RemoveEvents(OBSController obs)

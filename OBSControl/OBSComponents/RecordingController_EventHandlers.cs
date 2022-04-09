@@ -1,5 +1,6 @@
 ﻿using BS_Utils.Utilities;
 using OBSControl.HarmonyPatches;
+using OBSControl.UI;
 using OBSControl.Wrappers;
 using OBSWebsocketDotNet;
 using OBSWebsocketDotNet.Types;
@@ -112,7 +113,7 @@ namespace OBSControl.OBSComponents
                             levelInfo.levelID, difficultyBeatmap.difficulty, difficultyBeatmap.parentDifficultyBeatmapSet.beatmapCharacteristic);
                     }
                     LevelCompletionResultsWrapper? levelResults = null;
-                    if(levelCompletionResults != null)
+                    if (levelCompletionResults != null)
                         levelResults = new LevelCompletionResultsWrapper(levelCompletionResults, stats?.playCount ?? 0, GameStatus.GetMaxModifiedScore(levelCompletionResults.energy));
                     RecordingData? recordingData = LastLevelData;
                     if (recordingData == null)
@@ -154,10 +155,7 @@ namespace OBSControl.OBSComponents
             {
                 try
                 {
-                    TimeSpan stopDelay = TimeSpan.FromSeconds(Plugin.config?.RecordingStopDelay ?? 0);
-                    if (stopDelay > TimeSpan.Zero)
-                        await Task.Delay(stopDelay, RecordStopCancellationSource.Token);
-                    StopRecordingTask = TryStopRecordingAsync(RecordStopCancellationSource.Token);
+                    await TryStopOrRestartRecording().ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {
@@ -197,10 +195,7 @@ namespace OBSControl.OBSComponents
             {
                 if (RecordStopOption == RecordStopOption.ResultsView)
                 {
-                    TimeSpan stopDelay = TimeSpan.FromSeconds(Plugin.config?.RecordingStopDelay ?? 0);
-                    if (stopDelay > TimeSpan.Zero)
-                        await Task.Delay(stopDelay, RecordStopCancellationSource.Token);
-                    StopRecordingTask = TryStopRecordingAsync(RecordStopCancellationSource.Token);
+                    await TryStopOrRestartRecording().ConfigureAwait(false);
                 }
             }
             catch (OperationCanceledException)
@@ -213,6 +208,26 @@ namespace OBSControl.OBSComponents
                 Logger.log?.Debug(ex);
             }
         }
+
+        private async Task TryStopOrRestartRecording()
+        {
+            TimeSpan stopDelay = TimeSpan.FromSeconds(WasInGame ? 0 : (Plugin.config?.RecordingStopDelay ?? 0));
+            Logger.log?.Debug($"TryStopOrRestartRecording: enter, delay: {stopDelay}");
+            if (stopDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(stopDelay, RecordStopCancellationSource.Token).ConfigureAwait(false);
+            }
+            Logger.log?.Debug("TryStopOrRestartRecording: before stop recording.");
+            await TryStopRecordingAsync(RecordStopCancellationSource.Token).ConfigureAwait(false);
+
+            Logger.log?.Debug($"TryStopOrRestartRecording: enableLobby: {ControlScreenCoordinator.Instance?.ControlScreen?.EnableAutoRecordLobby}.");
+            if (ControlScreenCoordinator.Instance?.ControlScreen?.EnableAutoRecordLobby == true)
+            {
+                await TryStartRecordingAsync(RecordActionSourceType.Auto, RecordStartOption.None, true).ConfigureAwait(false);
+                Logger.log?.Debug("TryStopOrRestartRecording: end.");
+            }
+        }
+
         #endregion
 
 
@@ -251,7 +266,7 @@ namespace OBSControl.OBSComponents
         {
             Logger.log?.Info($"Recording State Changed: {type}");
             OutputState = type;
-            LastRecordingStateUpdate = DateTime.UtcNow;
+            LastRecordingStateUpdate = DateTime.Now;
             switch (type)
             {
                 case OutputState.Starting:
@@ -299,7 +314,6 @@ namespace OBSControl.OBSComponents
                     break;
                 case OutputState.Stopping:
                     recordingCurrentLevel = false;
-                    RecordStopCancellationSource.Cancel();
                     break;
                 case OutputState.Stopped:
                     recordingCurrentLevel = false;

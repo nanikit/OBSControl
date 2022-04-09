@@ -154,6 +154,12 @@
                       font-size='4' size-delta-x='50' align='MidlineLeft' italics='false' />
           </horizontal>
           <horizontal background='round-rect-panel' pad-left='3' pad-right='-3'
+                        preferred-height='6'
+                        child-control-width='false' child-expand-width='false'>
+            <checkbox text='Enable AutoRecordLobby:' value='EnableAutoRecordLobby' bind-value='true' apply-on-change='true'
+                      font-size='4' size-delta-x='50' align='MidlineLeft' italics='false' />
+          </horizontal>
+          <horizontal background='round-rect-panel' pad-left='3' pad-right='-3'
                       preferred-height='6'
                       child-control-width='false' child-expand-width='false'>
             <text text='Free Disk Space:'  align='MidlineLeft' size-delta-x='~LabelWidth' />

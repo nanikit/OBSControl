@@ -18,6 +18,8 @@ namespace OBSControl.HarmonyPatches
         new Type[] { })]
     public class GameSongController_ReadyToStart
     {
+        public static bool IsWaiting { get; private set; } = false;
+
         /// <summary>
         /// Delay level start until OBS is recording or timeout.
         /// </summary>
@@ -49,6 +51,7 @@ namespace OBSControl.HarmonyPatches
             // TODO: Add fallback for other recording start options that should've started recording by now?
             if (recordStartOption == RecordStartOption.SongStart)
             {
+                IsWaiting = true;
                 __result = new WaitUntil(() =>
                 {
                     if (!audioTimeSyncController.isAudioLoaded)
@@ -59,6 +62,7 @@ namespace OBSControl.HarmonyPatches
                     if (now + timeout < DateTime.UtcNow) // Wait timed out, continue anyway.
                     {
                         Logger.log?.Critical($"Level start wait timed out, starting song.");
+                        IsWaiting = false;
                         return true;
                     }
                     if (recordingController.OutputState == OBSWebsocketDotNet.Types.OutputState.Started)
@@ -74,6 +78,7 @@ namespace OBSControl.HarmonyPatches
                         }
 
                         Logger.log?.Debug($"Level start conditions met, starting song.");
+                        IsWaiting = false;
                         return true;
                     }
                     //Logger.log?.Debug($"OBS recording not started, delaying song.");
