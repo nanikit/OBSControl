@@ -212,19 +212,16 @@ namespace OBSControl.OBSComponents
         private async Task TryStopOrRestartRecording()
         {
             TimeSpan stopDelay = TimeSpan.FromSeconds(WasInGame ? 0 : (Plugin.config?.RecordingStopDelay ?? 0));
-            Logger.log?.Debug($"TryStopOrRestartRecording: enter, delay: {stopDelay}");
             if (stopDelay > TimeSpan.Zero)
             {
                 await Task.Delay(stopDelay, RecordStopCancellationSource.Token).ConfigureAwait(false);
             }
-            Logger.log?.Debug("TryStopOrRestartRecording: before stop recording.");
             await TryStopRecordingAsync(RecordStopCancellationSource.Token).ConfigureAwait(false);
 
-            Logger.log?.Debug($"TryStopOrRestartRecording: enableLobby: {ControlScreenCoordinator.Instance?.ControlScreen?.EnableAutoRecordLobby}.");
             if (ControlScreenCoordinator.Instance?.ControlScreen?.EnableAutoRecordLobby == true)
             {
                 await TryStartRecordingAsync(RecordActionSourceType.Auto, RecordStartOption.None, true).ConfigureAwait(false);
-                Logger.log?.Debug("TryStopOrRestartRecording: end.");
+                RenameStringOverride = $"Lobby {DateTime.Now:yyMMdd HHmmss}";
             }
         }
 
