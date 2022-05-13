@@ -38,6 +38,7 @@ namespace OBSControl.Utilities
             {'M', LevelDataType.Modifiers },
             {'m', LevelDataType.MissedCount },
             {'G', LevelDataType.GoodCutsCount },
+            {'g', LevelDataType.MissAndBadCutsCount },
             {'E', LevelDataType.LevelEndType },
             {'e', LevelDataType.LevelIncompleteType },
             {'C', LevelDataType.MaxCombo },
@@ -64,6 +65,7 @@ namespace OBSControl.Utilities
             Date,
             FirstPlay,
             BadCutsCount,
+            MissAndBadCutsCount,
             EndSongTimeNoLabels,
             EndSongTimeLabeled,
             FullCombo,
@@ -94,7 +96,7 @@ namespace OBSControl.Utilities
             };
         }
 
-        public static string GetLevelDataString(LevelDataType levelDataType, ILevelData levelData, 
+        public static string GetLevelDataString(LevelDataType levelDataType, ILevelData levelData,
             ILevelCompletionResults? levelCompletionResults, string? data = null)
         {
             string? retVal = null;
@@ -146,6 +148,9 @@ namespace OBSControl.Utilities
                         return "1st";
                     else
                         return string.Empty;
+                case LevelDataType.MissAndBadCutsCount:
+                    if (levelCompletionResults == null) return string.Empty;
+                    return $"{levelCompletionResults.MissedCount + levelCompletionResults.BadCutsCount}";
                 case LevelDataType.BadCutsCount:
                     if (levelCompletionResults == null) return string.Empty;
                     return levelCompletionResults.BadCutsCount.ToString();
@@ -222,12 +227,12 @@ namespace OBSControl.Utilities
         /// <param name="levelCompletionResults"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="difficultyBeatmap"/> or <paramref name="levelCompletionResults"/> is null.</exception>
-        public static string GetFilenameString(string? baseString, ILevelData levelData, ILevelCompletionResults? levelCompletionResults, 
+        public static string GetFilenameString(string? baseString, ILevelData levelData, ILevelCompletionResults? levelCompletionResults,
             string? invalidSubstitute = "", string? spaceReplacement = null)
         {
             if (levelData == null)
                 throw new ArgumentNullException(nameof(levelData), "difficultyBeatmap cannot be null for GetFilenameString.");
-            if(string.IsNullOrEmpty(baseString) || baseString == null)
+            if (string.IsNullOrEmpty(baseString) || baseString == null)
                 return string.Empty;
             if (!baseString.Contains("?"))
                 return baseString;
@@ -236,7 +241,7 @@ namespace OBSControl.Utilities
             bool substituteNext = false;
             bool inProcessingGroup = false; // Group that is skipped if there's no data
             bool ignoreGroup = true; // False if the processingGroup contains data
-            for(int i = 0; i < baseString.Length; i++)
+            for (int i = 0; i < baseString.Length; i++)
             {
                 char ch = baseString[i];
                 switch (ch)
@@ -264,7 +269,7 @@ namespace OBSControl.Utilities
                             {
                                 nextIndex++;
                                 int lastIndex = baseString.IndexOf('}', nextIndex);
-                                if(lastIndex > 0)
+                                if (lastIndex > 0)
                                 {
                                     dataString = baseString.Substring(nextIndex, lastIndex - nextIndex);
                                     i = lastIndex;
@@ -278,8 +283,8 @@ namespace OBSControl.Utilities
                                     data = GetLevelDataString(LevelDataSubstitutions[ch], levelData, levelCompletionResults, dataString);
                                 }
                                 catch
-                                { 
-                                    data = "INVLD"; 
+                                {
+                                    data = "INVLD";
                                 }
                                 if (!string.IsNullOrEmpty(data))
                                 {
@@ -293,11 +298,11 @@ namespace OBSControl.Utilities
                                 {
                                     stringBuilder.Append(GetLevelDataString(LevelDataSubstitutions[ch], levelData, levelCompletionResults, dataString));
                                 }
-                                catch 
-                                { 
-                                    stringBuilder.Append("INVLD"); 
+                                catch
+                                {
+                                    stringBuilder.Append("INVLD");
                                 }
-                                
+
                             }
                             substituteNext = false;
                         }
