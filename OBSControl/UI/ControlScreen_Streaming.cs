@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web.UI;
-using BeatSaberMarkupLanguage.Attributes;
-using BeatSaberMarkupLanguage.Components;
-using BeatSaberMarkupLanguage.ViewControllers;
+﻿using BeatSaberMarkupLanguage.Attributes;
 using OBSControl.OBSComponents;
 using OBSControl.UI.Formatters;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
+using ObsStrawket.DataTypes;
+using ObsStrawket.DataTypes.Predefineds;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 #nullable enable
 
@@ -17,7 +13,7 @@ namespace OBSControl.UI
 {
     public partial class ControlScreen
     {
-        protected StreamStatusEventArgs? CurrentStreamStatus;
+        protected GetStreamStatusResponse? CurrentStreamStatus;
         [UIValue(nameof(TimeFormatter))]
         public readonly TimeFormatter TimeFormatter = new TimeFormatter();
         #region Properties
@@ -76,15 +72,15 @@ namespace OBSControl.UI
         }
 
         [UIValue(nameof(StreamTime))]
-        public int StreamTime => CurrentStreamStatus?.TotalStreamTime ?? 0;
+        public int StreamTime => CurrentStreamStatus?.OutputDuration ?? 0;
         [UIValue(nameof(Bitrate))]
-        public float Bitrate => (CurrentStreamStatus?.KbitsPerSec ?? 0) / 1024f;
+        public float Bitrate => (CurrentStreamStatus?.OutputBytes ?? 0f) * 8f * ((CurrentStreamStatus?.OutputDuration ?? 0) / 1000f);
         [UIValue(nameof(Strain))]
-        public float Strain => CurrentStreamStatus?.Strain ?? 0;
+        public float Strain => StreamingDroppedFrames / Math.Max(1, StreamingOutputFrames);
         [UIValue(nameof(StreamingDroppedFrames))]
-        public int StreamingDroppedFrames => CurrentStreamStatus?.DroppedFrames ?? 0; 
+        public int StreamingDroppedFrames => CurrentStreamStatus?.OutputSkippedFrames ?? 0;
         [UIValue(nameof(StreamingOutputFrames))]
-        public int StreamingOutputFrames => CurrentStreamStatus?.TotalFrames ?? 0;
+        public int StreamingOutputFrames => CurrentStreamStatus?.OutputTotalFrames ?? 0;
 
 
         #endregion
@@ -106,7 +102,7 @@ namespace OBSControl.UI
                 Logger.log?.Debug(ex);
             }
             StreamButtonInteractable = true;
-        } 
+        }
 
         [UIAction(nameof(StopStreaming))]
         public async void StopStreaming()
@@ -127,10 +123,11 @@ namespace OBSControl.UI
         #endregion
 
         #region Event Handlers
-        private void OnStreamingStateChanged(object sender, OutputState e)
+        private void OnStreamingStateChanged(object sender, StreamStateChanged ev)
         {
             HMMainThreadDispatcher.instance.Enqueue(() =>
             {
+                var e = ev.OutputState;
                 bool enabled = GetOutputStateIsSettled(e);
                 if (enabled)
                     StartCoroutine(DelayedStreamInteractableEnable(e == OutputState.Stopped));
@@ -143,7 +140,7 @@ namespace OBSControl.UI
             });
         }
 
-        private void OnStreamStatus(object sender, StreamStatusEventArgs e)
+        private void OnStreamStatus(object sender, GetStreamStatusResponse e)
         {
             CurrentStreamStatus = e;
             NotifyPropertyChanged(nameof(StreamTime));

@@ -1,17 +1,14 @@
-﻿using BeatSaberMarkupLanguage;
-using BS_Utils.Utilities;
+﻿using BS_Utils.Utilities;
 using OBSControl.HarmonyPatches;
 using OBSControl.Utilities;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
+using ObsStrawket;
+using ObsStrawket.DataTypes.Predefineds;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 #nullable enable
 
 namespace OBSControl.OBSComponents
@@ -172,7 +169,7 @@ namespace OBSControl.OBSComponents
                 string? startScene = Plugin.config.StartSceneName;
                 if (startScene == null || startScene.Length == 0)
                     startScene = gameScene;
-                OBSWebsocket? obs = Obs.Obs;
+                ObsClientSocket? obs = Obs.Obs;
                 if (obs == null)
                 {
                     Logger.log?.Error($"Could not get OBS connection, aborting StartIntroSceneSequence.");
@@ -215,7 +212,7 @@ namespace OBSControl.OBSComponents
                     if (startScene != null && CurrentScene != startScene)
                     {
                         Logger.log?.Info($"Setting starting scene to '{startScene}'.");
-                        await obs.SetCurrentScene(startScene, cancellationToken);
+                        await obs.SetCurrentProgramSceneAsync(startScene, cancellation: cancellationToken);
                         await StartSceneSequenceSceneListener.Task;
                     }
                     else
@@ -231,7 +228,7 @@ namespace OBSControl.OBSComponents
                     if (gameScene.Length > 0 && CurrentScene != gameScene)
                     {
                         Logger.log?.Info($"Setting game scene to '{gameScene}'.");
-                        await obs.SetCurrentScene(gameScene, cancellationToken);
+                        await obs.SetCurrentProgramSceneAsync(gameScene, cancellation: cancellationToken);
                         await StartSceneSequenceSceneListener.Task;
                     }
                     else
@@ -249,7 +246,7 @@ namespace OBSControl.OBSComponents
                         if (CurrentScene == gameScene)
                         {
                             Logger.log?.Warn($"StartIntroSceneSequence canceled, switching to GameScene.");
-                            await obs.SetCurrentScene(gameScene);
+                            await obs.SetCurrentProgramSceneAsync(gameScene);
                         }
                         else
                             Logger.log?.Warn($"StartIntroSceneSequence canceled and already on GameScene.");
@@ -330,7 +327,7 @@ namespace OBSControl.OBSComponents
                     gameScene = null;
                 if (string.IsNullOrEmpty(restingScene))
                     restingScene = null;
-                OBSWebsocket? obs = Obs.Obs;
+                ObsClientSocket? obs = Obs.Obs;
                 if (obs == null)
                 {
                     Logger.log?.Error($"Could not get OBS connection, aborting StartOutroSceneSequence.");
@@ -387,7 +384,7 @@ namespace OBSControl.OBSComponents
                             await Task.Delay(endSceneStartDelay);
                         }
                         Logger.log?.Info($"Setting end scene scene to '{endScene}'.");
-                        await obs.SetCurrentScene(endScene, cancellationToken);
+                        await obs.SetCurrentProgramSceneAsync(endScene, cancellation: cancellationToken);
                         await StopSceneSequenceSceneListener.Task;
                     }
                     else
@@ -409,7 +406,7 @@ namespace OBSControl.OBSComponents
                     StopSceneSequenceSceneListener.StartListening();
                     if (restingScene != null && CurrentScene != restingScene)
                     {
-                        await obs.SetCurrentScene(restingScene, cancellationToken);
+                        await obs.SetCurrentProgramSceneAsync(restingScene, cancellation: cancellationToken);
                         await StopSceneSequenceSceneListener.Task;
                     }
                     else
@@ -433,7 +430,7 @@ namespace OBSControl.OBSComponents
                             else
                             {
                                 Logger.log?.Warn($"StartOutroSceneSequence canceled, switching to GameScene.");
-                                await obs.SetCurrentScene(gameScene, cancellationToken);
+                                await obs.SetCurrentProgramSceneAsync(gameScene, cancellation: cancellationToken);
                             }
                         }
                         else
@@ -502,17 +499,20 @@ namespace OBSControl.OBSComponents
 
         public async Task SetScene(string sceneName)
         {
-            OBSWebsocket obs = Obs.Obs ?? throw new InvalidOperationException("OBSWebsocket is unavailable.");
+            ObsClientSocket obs = Obs.Obs ?? throw new InvalidOperationException("ObsClientSocket is unavailable.");
 
-            AsyncEventListener<bool, SceneChangeEventArgs> SceneListener = new AsyncEventListener<bool, SceneChangeEventArgs>((s, name) =>
+            var SceneListener = new AsyncEventListener<bool, CurrentProgramSceneChanged>((s, name) =>
               {
-                  bool result = sceneName == name.NewSceneName;
+                  bool result = sceneName == name.SceneName;
                   return new EventListenerResult<bool>(result, true);
               }, 5000, AllTasksCancelSource.Token);
+
+            void OnEvent(CurrentProgramSceneChanged ev) => SceneListener!.OnEvent(this, ev);
+
             try
             {
-                obs.SceneChanged += SceneListener.OnEvent;
-                await obs.SetCurrentScene(sceneName).ConfigureAwait(false);
+                obs.CurrentProgramSceneChanged += OnEvent;
+                await obs.SetCurrentProgramSceneAsync(sceneName).ConfigureAwait(false);
                 string? current = await UpdateCurrentScene(AllTasksCancelSource.Token).ConfigureAwait(false);
                 if (current == sceneName)
                     return;
@@ -525,13 +525,13 @@ namespace OBSControl.OBSComponents
             }
             finally
             {
-                obs.SceneChanged -= SceneListener.OnEvent;
+                obs.CurrentProgramSceneChanged -= OnEvent;
             }
         }
 
         public async Task<string?> UpdateCurrentScene(CancellationToken cancellationToken)
         {
-            OBSWebsocket? obs = Obs.GetConnectedObs();
+            ObsClientSocket? obs = Obs.GetConnectedObs();
             if (obs == null)
             {
                 Logger.log?.Warn("Unable to update current scene. OBS not connected.");
@@ -539,7 +539,7 @@ namespace OBSControl.OBSComponents
             }
             try
             {
-                string currentScene = (await obs.GetCurrentScene(cancellationToken).ConfigureAwait(false)).Name;
+                string currentScene = (await obs.GetCurrentProgramSceneAsync(cancellation: cancellationToken).ConfigureAwait(false))!.CurrentProgramSceneName;
                 CurrentScene = currentScene;
                 return currentScene;
             }
@@ -558,7 +558,7 @@ namespace OBSControl.OBSComponents
         /// <returns></returns>
         public async Task UpdateScenes(bool forceCurrentUpdate = true)
         {
-            OBSWebsocket? obs = Obs.GetConnectedObs();
+            ObsClientSocket? obs = Obs.GetConnectedObs();
             if (obs == null)
             {
                 Logger.log?.Warn("Unable to update current scene. OBS not connected.");
@@ -567,12 +567,12 @@ namespace OBSControl.OBSComponents
             string[] availableScenes = null!;
             try
             {
-                GetSceneListInfo sceneData = await obs.GetSceneList().ConfigureAwait(false);
-                availableScenes = (sceneData).Scenes.Select(s => s.Name).ToArray();
+                var sceneData = await obs.GetSceneListAsync().ConfigureAwait(false);
+                availableScenes = sceneData!.Scenes.Select(s => s.Name).ToArray();
                 Logger.log?.Info($"OBS scene list updated: {string.Join(", ", availableScenes)}");
                 try
                 {
-                    string? current = sceneData.CurrentScene;
+                    string? current = sceneData.CurrentProgramSceneName;
                     if (current != null && current.Length > 0)
                         CurrentScene = current;
                     else if (forceCurrentUpdate)
@@ -663,17 +663,17 @@ namespace OBSControl.OBSComponents
             BSEvents.LevelFinished -= OnLevelDidFinish;
             StartLevelPatch.LevelStarting -= OnLevelStarting;
         }
-        protected override void SetEvents(OBSWebsocket obs)
+        protected override void SetEvents(ObsClientSocket obs)
         {
             RemoveEvents(obs);
             obs.SceneListChanged += OnObsSceneListChanged;
-            obs.SceneChanged += OnObsSceneChanged;
+            obs.CurrentProgramSceneChanged += OnObsSceneChanged;
         }
 
-        protected override void RemoveEvents(OBSWebsocket obs)
+        protected override void RemoveEvents(ObsClientSocket obs)
         {
             obs.SceneListChanged -= OnObsSceneListChanged;
-            obs.SceneChanged -= OnObsSceneChanged;
+            obs.CurrentProgramSceneChanged -= OnObsSceneChanged;
         }
         #endregion
 
@@ -704,7 +704,7 @@ namespace OBSControl.OBSComponents
         }
 
         #region OBS Websocket Event Handlers
-        private async void OnObsSceneListChanged(object sender, EventArgs? e)
+        private async void OnObsSceneListChanged(SceneListChanged e)
         {
             try
             {
@@ -716,10 +716,10 @@ namespace OBSControl.OBSComponents
                 Logger.log?.Debug(ex);
             }
         }
-        private void OnObsSceneChanged(object sender, SceneChangeEventArgs e)
+        private void OnObsSceneChanged(CurrentProgramSceneChanged e)
         {
-            Logger.log?.Info($"Scene changed to '{e.NewSceneName}'");
-            CurrentScene = e.NewSceneName;
+            Logger.log?.Info($"Scene changed to '{e.SceneName}'");
+            CurrentScene = e.SceneName;
         }
         #endregion
 
@@ -754,7 +754,7 @@ namespace OBSControl.OBSComponents
     public class SceneStageChangedEventArgs : EventArgs
     {
         public readonly SceneStage SceneStage;
-        public Func<SceneStage, CancellationToken, Task>[] GetCallbacks() => callbacks?.ToArray() 
+        public Func<SceneStage, CancellationToken, Task>[] GetCallbacks() => callbacks?.ToArray()
             ?? Array.Empty<Func<SceneStage, CancellationToken, Task>>();
         protected List<Func<SceneStage, CancellationToken, Task>>? callbacks;
         public void AddCallback(Func<SceneStage, CancellationToken, Task> callback)

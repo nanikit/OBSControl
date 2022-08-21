@@ -1,14 +1,11 @@
-﻿using System;
+﻿using BeatSaberMarkupLanguage.Attributes;
+using OBSControl.OBSComponents;
+using ObsStrawket;
+using ObsStrawket.DataTypes;
+using ObsStrawket.DataTypes.Predefineds;
+using System;
 using System.Collections.Generic;
 using System.Threading;
-using System.Web.UI;
-using BeatSaberMarkupLanguage.Attributes;
-using BeatSaberMarkupLanguage.Components;
-using BeatSaberMarkupLanguage.ViewControllers;
-using OBSControl.OBSComponents;
-using OBSControl.UI.Formatters;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
 using UnityEngine;
 #nullable enable
 
@@ -120,13 +117,13 @@ namespace OBSControl.UI
         [UIAction(nameof(StartRecording))]
         public async void StartRecording()
         {
-            OBSWebsocket? obs = OBSController.GetConnectedObs();
+            ObsClientSocket? obs = OBSController.GetConnectedObs();
             if (obs == null)
             {
                 Logger.log?.Warn("Unable to update current scene. OBS not connected.");
                 return;
             }
-            RecordButtonInteractable = false;
+            //RecordButtonInteractable = false;
             try
             {
                 await RecordingController.TryStartRecordingAsync(RecordActionSourceType.Manual, RecordStartOption.Immediate);
@@ -143,7 +140,7 @@ namespace OBSControl.UI
         [UIAction(nameof(StopRecording))]
         public async void StopRecording()
         {
-            RecordButtonInteractable = false;
+            //RecordButtonInteractable = false;
             try
             {
                 await RecordingController.TryStopRecordingAsync(CancellationToken.None);
@@ -200,19 +197,23 @@ namespace OBSControl.UI
         }
 
         #region Event Handlers
-        private void OnRecordingStateChanged(object sender, OutputState e)
+        private void OnRecordingStateChanged(object sender, RecordStateChanged ev)
         {
             HMMainThreadDispatcher.instance.Enqueue(() =>
             {
-                bool enabled = GetOutputStateIsSettled(e);
-                if (enabled)
-                    StartCoroutine(DelayedRecordInteractableEnable());
-                else
-                    RecordButtonInteractable = false;
-                if (e == OutputState.Started)
-                    IsRecording = true;
-                else if (e == OutputState.Stopped)
-                    IsRecording = false;
+                var e = ev.OutputState;
+                Logger.log?.Debug($"ControlScreen.OnRecordStateChanged: {e}");
+                switch (e)
+                {
+                    case OutputState.Started:
+                        IsRecording = true;
+                        break;
+                    case OutputState.Stopped:
+                        IsRecording = false;
+                        break;
+                    default:
+                        break;
+                }
             });
         }
         #endregion

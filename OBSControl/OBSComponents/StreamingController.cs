@@ -1,10 +1,7 @@
-﻿using OBSControl.Wrappers;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
+﻿using ObsStrawket;
+using ObsStrawket.DataTypes;
+using ObsStrawket.DataTypes.Predefineds;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -28,7 +25,7 @@ namespace OBSControl.OBSComponents
 
         private async Task<bool> InternalStartStreaming(CancellationToken cancellationToken, TaskCompletionSource<bool> taskCompletion)
         {
-            OBSWebsocket? obs = Obs?.Obs;
+            ObsClientSocket? obs = Obs?.Obs;
             string? message = null;
             bool success = false;
             if (obs == null)
@@ -39,7 +36,7 @@ namespace OBSControl.OBSComponents
             {
                 try
                 {
-                    await obs.StartStreaming(cancellationToken).ConfigureAwait(false);
+                    await obs.StartStreamAsync(cancellation: cancellationToken).ConfigureAwait(false);
                     success = true;
                     // Do not set completion here, will be done in OnStreamingStateChanged.
                 }
@@ -99,7 +96,7 @@ namespace OBSControl.OBSComponents
 
         private async Task<bool> InternalStopStreaming(CancellationToken cancellationToken, TaskCompletionSource<bool> taskCompletion)
         {
-            OBSWebsocket? obs = Obs?.Obs;
+            ObsClientSocket? obs = Obs?.Obs;
             string? message = null;
             bool success = false;
             if (obs == null)
@@ -110,7 +107,7 @@ namespace OBSControl.OBSComponents
             {
                 try
                 {
-                    await obs.StopStreaming(cancellationToken).ConfigureAwait(false);
+                    await obs.StopStreamAsync(cancellation: cancellationToken).ConfigureAwait(false);
                     success = true;
                     // Do not set completion here, will be done in OnStreamingStateChanged.
                 }
@@ -170,8 +167,9 @@ namespace OBSControl.OBSComponents
 
         #region OBS Event Handlers
 
-        private void OnStreamingStateChanged(object sender, OutputState type)
+        private void OnStreamingStateChanged(object sender, StreamStateChanged changed)
         {
+            var type = changed.OutputState;
             Logger.log?.Debug($"Streaming State Changed: {type}");
             StreamingState = type;
             TaskCompletionSource<bool>? startCompletion = StartCompletion;
@@ -212,11 +210,11 @@ namespace OBSControl.OBSComponents
         public override async Task InitializeAsync(OBSController obs)
         {
             await base.InitializeAsync(obs);
-            OBSWebsocket? websocket = obs.GetConnectedObs();
+            ObsClientSocket? websocket = obs.GetConnectedObs();
             if (websocket != null)
             {
-                OutputStatus status = await websocket.GetStreamingStatus().ConfigureAwait(false);
-                StreamingState = status.IsStreaming ? OutputState.Started : OutputState.Stopped;
+                var status = await websocket.GetStreamStatusAsync().ConfigureAwait(false);
+                StreamingState = status?.OutputActive == true ? OutputState.Started : OutputState.Stopped;
             }
         }
         protected override void SetEvents(OBSController obs)
@@ -233,11 +231,11 @@ namespace OBSControl.OBSComponents
             obs.StreamingStateChanged -= OnStreamingStateChanged;
         }
 
-        protected override void SetEvents(OBSWebsocket obs)
+        protected override void SetEvents(ObsClientSocket obs)
         {
         }
 
-        protected override void RemoveEvents(OBSWebsocket obs)
+        protected override void RemoveEvents(ObsClientSocket obs)
         {
         }
 

@@ -1,228 +1,222 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OBSControl</RootNamespace>
-    <AssemblyName>OBSControl</AssemblyName>
-    <Version>0.0.0</Version>
-    <Authors>Zingabopp</Authors>
-    <Copyright>Copyright © Zingabopp 2020</Copyright>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageProjectUrl>https://github.com/Zingabopp/OBSControl</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Zingabopp/OBSControl</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <Description>A Beat Saber mod to automatically start/stop recording in OBS when you play a song.</Description>
-    <TargetFramework>net48</TargetFramework>
-    <!--<PathMap Condition="'$(SolutionDir)' != ''">$(SolutionDir)=C:\</PathMap>-->
-    <DebugType>portable</DebugType>
-    <BeatSaberReferences>..\Refs</BeatSaberReferences>
-    <BeatSaberDir>$(BeatSaberReferences)</BeatSaberDir>
-    <RuntimeIdentifiers>win</RuntimeIdentifiers>
-    <LangVersion>9</LangVersion>
-    <Nullable>enable</Nullable>
-    <DisableCopyToPlugins>false</DisableCopyToPlugins>
-    <VersionType>Unofficial</VersionType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(NCrunch)' == '1' ">
-    <DisableCopyToPlugins>True</DisableCopyToPlugins>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>portable</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>NEW_BSML2</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="BeatmapCore">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\BeatmapCore.dll</HintPath>
-      <Private>False</Private>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="BSML">
-      <HintPath>$(BeatSaberReferences)\Plugins\BSML.dll</HintPath>
-      <Private>True</Private>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="BS_Utils">
-      <HintPath>$(BeatSaberReferences)\Plugins\BS_Utils.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="GameplayCore">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\GameplayCore.dll</HintPath>
-      <Private>False</Private>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="HMLib">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\HMLib.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\netstandard.dll</HintPath>
-      <Private>False</Private>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="System">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Core">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Web" />
-    <Reference Include="System.Xml.Linq">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Data.DataSetExtensions">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Data">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="System.Xml">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Main">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\Main.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="HMUI">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\HMUI.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="IPA.Loader">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\IPA.Loader.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="0Harmony">
-      <HintPath>$(BeatSaberReferences)\Libs\0Harmony.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Unity.TextMeshPro">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\Unity.TextMeshPro.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="UnityEngine">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <Private>False</Private>
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <Private>True</Private>
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.UI.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="UnityEngine.UIElementsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <Private>False</Private>
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="UnityEngine.UIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <Private>False</Private>
-      <HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.UIModule.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="VRUI">
-      <HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\VRUI.dll</HintPath>
-      <Private>False</Private>
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="manifest.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\LICENSE">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
-    <None Include="Directory.Build.props" />
-    <None Include="Directory.Build.targets" />
-    <None Include=".gitignore" />
-    <None Include="ILRepack.targets" />
-    <EmbeddedResource Include="UI\SettingsView.bsml" />
-    <EmbeddedResource Include="UI\ControlScreen.bsml">
-      <DependentUpon>ControlScreen.cs</DependentUpon>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="BeatSaberModdingTools.Tasks">
-      <Version>1.3.2</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="CSCore">
-      <Version>1.2.1.2</Version>
-    </PackageReference>
-    <PackageReference Include="ILRepack.MSBuild.Task">
-      <Version>2.0.13</Version>
-      <IncludeAssets>build</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\obs-websocket-dotnet\obs-websocket-dotnet\obs-websocket-dotnet.csproj">
-      <Project>{c8668815-f21e-49c0-8f1a-58bc698153af}</Project>
-      <Name>obs-websocket-dotnet</Name>
-      <SetTargetFramework>TargetFramework=net46</SetTargetFramework>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Icons\lock.png" />
-    <None Include="Icons\lock.svg" />
-    <EmbeddedResource Include="Icons\lock_open.png" />
-    <None Include="Icons\lock_open.svg" />
-    <EmbeddedResource Include="Icons\unfold_less.png" />
-    <None Include="Icons\unfold_less.svg" />
-    <EmbeddedResource Include="Icons\unfold_more.png" />
-    <None Include="Icons\unfold_more.svg" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Icons\reset.png" />
-    <None Include="Icons\reset.svg" />
-  </ItemGroup>
-  <Import Project="ILRepack.targets" />
-  <Target Name="PreBuild" BeforeTargets="BeforeBuild" Condition="'$(NCRUNCH)' != '1'">
-    <Error Text="The BeatSaberModdingTools.Tasks nuget package doesn't seem to be installed." Condition="'$(BSMTTaskAssembly)' == ''" />
-    <GetCommitInfo ProjectDir="$(ProjectDir)">
-      <Output TaskParameter="CommitHash" PropertyName="CommitHash" />
-      <Output TaskParameter="Branch" PropertyName="GitBranch" />
-      <Output TaskParameter="IsPullRequest" PropertyName="IsPullRequest" />
-      <Output TaskParameter="Modified" PropertyName="GitModified" />
-      <Output TaskParameter="GitUser" PropertyName="GitUser" />
-    </GetCommitInfo>
-    <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' AND '$(GitUser)' == 'Zingabopp' AND '$(IsPullRequest)' != 'true'">
-      <VersionType>Official</VersionType>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(GitModified)' != 'Modified'">
-      <InformationalVersion>$(VersionType)-$(GitBranch)-$(CommitHash)</InformationalVersion>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(GitModified)' == 'Modified'">
-      <InformationalVersion>$(VersionType)-$(GitBranch)-$(CommitHash)-$(GitModified)</InformationalVersion>
-    </PropertyGroup>
-    <Message Text="Version $(InformationalVersion)" Importance="high" />
-  </Target>
-  
+	<PropertyGroup>
+		<OutputType>Library</OutputType>
+		<AppDesignerFolder>Properties</AppDesignerFolder>
+		<RootNamespace>OBSControl</RootNamespace>
+		<AssemblyName>OBSControl</AssemblyName>
+		<Version>0.0.0</Version>
+		<Authors>Zingabopp</Authors>
+		<Copyright>Copyright © Zingabopp 2020</Copyright>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageProjectUrl>https://github.com/Zingabopp/OBSControl</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/Zingabopp/OBSControl</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<Description>A Beat Saber mod to automatically start/stop recording in OBS when you play a song.</Description>
+		<TargetFramework>net48</TargetFramework>
+		<!--<PathMap Condition="'$(SolutionDir)' != ''">$(SolutionDir)=C:\</PathMap>-->
+		<DebugType>portable</DebugType>
+		<BeatSaberReferences>..\Refs</BeatSaberReferences>
+		<BeatSaberDir>$(BeatSaberReferences)</BeatSaberDir>
+		<RuntimeIdentifiers>win</RuntimeIdentifiers>
+		<LangVersion>10</LangVersion>
+		<Nullable>enable</Nullable>
+		<DisableCopyToPlugins>false</DisableCopyToPlugins>
+		<VersionType>Unofficial</VersionType>
+	</PropertyGroup>
+	<PropertyGroup>
+		<BSMTProjectType>BSIPA</BSMTProjectType>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(NCrunch)' == '1' ">
+		<DisableCopyToPlugins>True</DisableCopyToPlugins>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+		<DebugSymbols>true</DebugSymbols>
+		<Optimize>false</Optimize>
+		<OutputPath>bin\Debug\</OutputPath>
+		<DefineConstants>DEBUG;TRACE</DefineConstants>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>4</WarningLevel>
+		<DebugType>portable</DebugType>
+	</PropertyGroup>
+	<PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+		<DebugType>portable</DebugType>
+		<Optimize>true</Optimize>
+		<OutputPath>bin\Release\</OutputPath>
+		<DefineConstants>NEW_BSML2</DefineConstants>
+		<ErrorReport>prompt</ErrorReport>
+		<WarningLevel>4</WarningLevel>
+	</PropertyGroup>
+	<ItemGroup>
+		<Reference Include="BeatmapCore">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\BeatmapCore.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="BSML">
+			<HintPath>$(BeatSaberReferences)\Plugins\BSML.dll</HintPath>
+			<Private>True</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="BS_Utils">
+			<HintPath>$(BeatSaberReferences)\Plugins\BS_Utils.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="GameplayCore">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\GameplayCore.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="HMLib">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\HMLib.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="netstandard, Version=2.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\netstandard.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="System">
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="System.Core">
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="System.Web" />
+		<Reference Include="System.Xml.Linq">
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="System.Data.DataSetExtensions">
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="System.Data">
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="System.Xml">
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="Main">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\Main.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="HMUI">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\HMUI.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="IPA.Loader">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\IPA.Loader.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="0Harmony">
+			<HintPath>$(BeatSaberReferences)\Libs\0Harmony.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="Unity.TextMeshPro">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="UnityEngine">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="UnityEngine.AnimationModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+			<Private>False</Private>
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="UnityEngine.CoreModule">
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+			<Private>True</Private>
+		</Reference>
+		<Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+			<Private>True</Private>
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.UI.dll</HintPath>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="UnityEngine.UIElementsModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+			<Private>False</Private>
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="UnityEngine.UIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+			<Private>False</Private>
+			<HintPath>$(BeatSaberReferences)\Beat Saber_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="VRUI">
+			<HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\VRUI.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="manifest.json" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="..\LICENSE">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+		<None Include="Directory.Build.props" />
+		<None Include=".gitignore" />
+		<EmbeddedResource Include="UI\SettingsView.bsml" />
+		<EmbeddedResource Include="UI\ControlScreen.bsml">
+			<DependentUpon>ControlScreen.cs</DependentUpon>
+		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="BeatSaberModdingTools.Tasks">
+			<Version>2.0.0-beta4</Version>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+		</PackageReference>
+		<PackageReference Include="CSCore">
+			<Version>1.2.1.2</Version>
+		</PackageReference>
+		<PackageReference Include="ILRepack" Version="2.1.0-beta1" GeneratePathProperty="true" />
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Icons\lock.png" />
+		<None Include="Icons\lock.svg" />
+		<EmbeddedResource Include="Icons\lock_open.png" />
+		<None Include="Icons\lock_open.svg" />
+		<EmbeddedResource Include="Icons\unfold_less.png" />
+		<None Include="Icons\unfold_less.svg" />
+		<EmbeddedResource Include="Icons\unfold_more.png" />
+		<None Include="Icons\unfold_more.svg" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Icons\reset.png" />
+		<None Include="Icons\reset.svg" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ObsStrawket\ObsStrawket.csproj" />
+	</ItemGroup>
+	<Target Name="PreBuild" BeforeTargets="BeforeBuild" Condition="'$(NCRUNCH)' != '1'">
+		<Error Text="The BeatSaberModdingTools.Tasks nuget package doesn't seem to be installed." Condition="'$(BSMTTaskAssembly)' == ''" />
+		<GetCommitInfo ProjectDir="$(ProjectDir)">
+			<Output TaskParameter="CommitHash" PropertyName="CommitHash" />
+			<Output TaskParameter="Branch" PropertyName="GitBranch" />
+			<Output TaskParameter="IsPullRequest" PropertyName="IsPullRequest" />
+			<Output TaskParameter="Modified" PropertyName="GitModified" />
+			<Output TaskParameter="GitUser" PropertyName="GitUser" />
+		</GetCommitInfo>
+		<PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true' AND '$(GitUser)' == 'Zingabopp' AND '$(IsPullRequest)' != 'true'">
+			<VersionType>Official</VersionType>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(GitModified)' != 'Modified'">
+			<InformationalVersion>$(VersionType)-$(GitBranch)-$(CommitHash)</InformationalVersion>
+		</PropertyGroup>
+		<PropertyGroup Condition="'$(GitModified)' == 'Modified'">
+			<InformationalVersion>$(VersionType)-$(GitBranch)-$(CommitHash)-$(GitModified)</InformationalVersion>
+		</PropertyGroup>
+		<Message Text="Version $(InformationalVersion)" Importance="high" />
+	</Target>
+	<Target Name="ILRepacker" BeforeTargets="BSMT_AfterBuild">
+		<Exec WorkingDirectory="$(TargetDir)" Command="$(PkgILRepack)\tools\ILRepack.exe /copyattrs &quot;/internalize:$(ProjectDir)exclude.txt&quot; &quot;/out:$(TargetFileName)&quot; $(TargetFileName) CSCore.dll Microsoft.NET.StringTools.dll System.Buffers.dll System.Memory.dll System.Runtime.CompilerServices.Unsafe.dll System.Threading.Tasks.Extensions.dll Nerdbank.Streams.dll MessagePack.dll MessagePack.Annotations.dll ObsStrawket.dll Microsoft.Bcl.AsyncInterfaces.dll System.Collections.Immutable.dll Microsoft.VisualStudio.Validation.dll System.IO.Pipelines.dll Microsoft.VisualStudio.Threading.dll System.Threading.Channels.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.Lightweight.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.ILGeneration.dll Microsoft.Extensions.Logging.Abstractions.dll" />
+	</Target>
 </Project>

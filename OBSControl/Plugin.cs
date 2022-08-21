@@ -36,7 +36,6 @@ namespace OBSControl
 
             config = conf.Generated<PluginConfig>();
 
-            OBSWebsocketDotNet.OBSLogger.SetLogger(new OBSLogger());
             BSMLSettings.instance.AddSettingsMenu("OBSControl", "OBSControl.UI.SettingsView.bsml", config);
             BS_Utils.Utilities.BSEvents.lateMenuSceneLoadedFresh += BSEvents_lateMenuSceneLoadedFresh;
         }

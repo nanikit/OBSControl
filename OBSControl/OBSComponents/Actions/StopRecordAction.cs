@@ -1,10 +1,8 @@
 ﻿using OBSControl.Utilities;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
+using ObsStrawket;
+using ObsStrawket.DataTypes;
+using ObsStrawket.DataTypes.Predefineds;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,7 +14,7 @@ namespace OBSControl.OBSComponents.Actions
 
         public int Timeout { get; set; } = 5000; // TODO: What if transition > 5 seconds?
         private AsyncEventListenerWithArg<OutputState, OutputState, OutputState> RecordStateListener { get; }
-        public StopRecordAction(OBSWebsocket obs)
+        public StopRecordAction(ObsClientSocket obs)
             : base(obs)
         {
 
@@ -34,14 +32,14 @@ namespace OBSControl.OBSComponents.Actions
         {
             try
             {
-                obs.RecordingStateChanged -= OnRecordingStateChanged;
-                obs.RecordingStateChanged += OnRecordingStateChanged;
+                obs.RecordStateChanged -= OnRecordingStateChanged;
+                obs.RecordStateChanged += OnRecordingStateChanged;
                 RecordStateListener.Reset(OutputState.Stopped, cancellationToken);
                 RecordStateListener.StartListening();
                 bool isRecording = (await obs.GetRecordingStatus(cancellationToken)) == OutputState.Started;
                 if (!isRecording)
                     return;
-                await obs.StopRecording(cancellationToken).ConfigureAwait(false);
+                await obs.StopRecordAsync(cancellation: cancellationToken).ConfigureAwait(false);
                 await RecordStateListener.Task.ConfigureAwait(false);
                 await Task.Delay(500, cancellationToken).ConfigureAwait(false);
             }
@@ -49,7 +47,7 @@ namespace OBSControl.OBSComponents.Actions
             {
                 Logger.log?.Debug($"Stop recording was canceled in 'StopRecordAction'.");
             }
-            catch (ErrorResponseException ex)
+            catch (FailureResponseException ex)
             {
                 Logger.log?.Error($"Error trying to stop recording: {ex.Message}");
                 if (ex.Message != "recording not active")
@@ -68,14 +66,14 @@ namespace OBSControl.OBSComponents.Actions
             }
         }
 
-        private void OnRecordingStateChanged(object sender, OutputStateChangedEventArgs e)
+        private void OnRecordingStateChanged(RecordStateChanged e)
         {
             RecordStateListener.OnEvent(this, e.OutputState);
         }
 
         protected override void Cleanup()
         {
-            obs.RecordingStateChanged -= OnRecordingStateChanged;
+            obs.RecordStateChanged -= OnRecordingStateChanged;
             RecordStateListener.TrySetCanceled();
         }
     }

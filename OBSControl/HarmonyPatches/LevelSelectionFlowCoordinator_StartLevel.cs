@@ -4,7 +4,8 @@ using HarmonyLib;
 using HMUI;
 using IPA.Utilities;
 using OBSControl.OBSComponents;
-using OBSWebsocketDotNet.Types;
+using ObsStrawket.DataTypes;
+using ObsStrawket.DataTypes.Predefineds;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,6 +18,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Scene = UnityEngine.SceneManagement.Scene;
 #nullable enable
 namespace OBSControl.HarmonyPatches
 {
@@ -82,6 +84,7 @@ namespace OBSControl.HarmonyPatches
             ref Action beforeSceneSwitchCallback, ref bool practice,
             LevelSelectionNavigationController ___levelSelectionNavigationController)
         {
+            Logger.log?.Debug($"{nameof(StartLevelPatch)}.Prefix: entered.");
             if (WaitingToStart)
             {
                 Logger.log?.Debug($"StartLevelPatch was waiting to start, starting level.");
@@ -115,6 +118,7 @@ namespace OBSControl.HarmonyPatches
                 if (handler == null)
                 {
                     returnValue = true;
+                    Logger.log?.Debug($"{nameof(StartLevelPatch)}.Prefix: handler == null. exit.");
                     return true;
                 }
                 EventHandler<LevelStartingEventArgs>[] invocations = handler.GetInvocationList().Select(d => (EventHandler<LevelStartingEventArgs>)d).ToArray();
@@ -144,7 +148,7 @@ namespace OBSControl.HarmonyPatches
                 }
                 else
                 {
-                    
+
                 }
                 if (response == LevelStartResponse.Immediate)
                 {
@@ -200,6 +204,7 @@ namespace OBSControl.HarmonyPatches
             }
             playButton.interactable = true;
             levelView.hidePracticeButton = !practiceButtonEnabled;
+            Logger.log?.Debug($"{nameof(StartLevelPatch)}.Prefix: exit.");
             return true;
         }
 
@@ -263,8 +268,8 @@ namespace OBSControl.HarmonyPatches
 
         }
 
-        private static EventHandler<OutputState>? _recordStateChangedAction;
-        internal static EventHandler<OutputState>? RecordStateChangedAction
+        private static EventHandler<RecordStateChanged>? _recordStateChangedAction;
+        internal static EventHandler<RecordStateChanged>? RecordStateChangedAction
         {
             get => _recordStateChangedAction;
             set

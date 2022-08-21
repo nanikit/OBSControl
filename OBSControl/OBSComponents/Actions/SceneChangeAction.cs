@@ -1,9 +1,7 @@
 ﻿using OBSControl.Utilities;
-using OBSWebsocketDotNet;
+using ObsStrawket;
+using ObsStrawket.DataTypes.Predefineds;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -16,7 +14,7 @@ namespace OBSControl.OBSComponents.Actions
         public int Timeout { get; set; } = 5000; // TODO: What if transition > 5 seconds?
         private AsyncEventListenerWithArg<string?, string, string> SceneListener { get; }
 
-        public SceneChangeAction(OBSWebsocket obs, string sceneName)
+        public SceneChangeAction(ObsClientSocket obs, string sceneName)
             : base(obs)
         {
             if (string.IsNullOrEmpty(sceneName))
@@ -33,26 +31,26 @@ namespace OBSControl.OBSComponents.Actions
              }, string.Empty, Timeout);
         }
 
-        private void OnSceneChange(object sender, SceneChangeEventArgs e)
+        private void OnSceneChange(CurrentProgramSceneChanged ev)
         {
-            SceneListener.OnEvent(sender, e.NewSceneName);
+            SceneListener.OnEvent(obs, ev.SceneName);
         }
 
         protected override async Task ActionAsync(CancellationToken cancellationToken)
         {
-            obs.SceneChanged -= OnSceneChange;
-            obs.SceneChanged += OnSceneChange;
+            obs.CurrentProgramSceneChanged -= OnSceneChange;
+            obs.CurrentProgramSceneChanged += OnSceneChange;
             SceneListener.Reset(SceneName, cancellationToken);
             SceneListener.StartListening();
-            var currentScene = await obs.GetCurrentScene(cancellationToken).ConfigureAwait(false);
-            if (currentScene != null && currentScene.Name == SceneName)
+            var currentScene = await obs.GetCurrentProgramSceneAsync(cancellation: cancellationToken).ConfigureAwait(false);
+            if (currentScene?.RequestStatus.Result == true && currentScene.CurrentProgramSceneName == SceneName)
                 return;
             await SceneListener.Task.ConfigureAwait(false);
         }
 
         protected override void Cleanup()
         {
-            obs.SceneChanged -= OnSceneChange;
+            obs.CurrentProgramSceneChanged -= OnSceneChange;
             SceneListener.TrySetCanceled();
         }
     }

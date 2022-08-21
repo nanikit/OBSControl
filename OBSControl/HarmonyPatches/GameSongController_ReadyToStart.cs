@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using HarmonyLib;
 using OBSControl.OBSComponents;
+using ObsStrawket.DataTypes;
 using UnityEngine;
 #nullable enable
 /// <summary>
@@ -25,10 +26,12 @@ namespace OBSControl.HarmonyPatches
         /// </summary>
         static void Postfix(GameSongController __instance, ref AudioTimeSyncController ____audioTimeSyncController, ref WaitUntil __result)
         {
+            Logger.log?.Trace($"{nameof(GameSongController_ReadyToStart)}.Postfix| Entered");
             RecordingController? recordingController = OBSController.instance?.GetOBSComponent<RecordingController>();
             AudioTimeSyncController audioTimeSyncController = ____audioTimeSyncController;
             if (!(recordingController?.ActiveAndConnected ?? false))
             {
+                Logger.log?.Trace($"{nameof(GameSongController_ReadyToStart)}.Postfix| recordingController is disabled. return.");
                 return;
             }
             AudioDevicesController? audioDeviceController = OBSController.instance?.GetOBSComponent<AudioDevicesController>();
@@ -38,7 +41,10 @@ namespace OBSControl.HarmonyPatches
             }
             RecordStartOption recordStartOption = recordingController.RecordStartOption;
             if (recordStartOption != RecordStartOption.SongStart)
+            {
+                Logger.log?.Trace($"{nameof(GameSongController_ReadyToStart)}.Postfix| recordStartOption != SontStart. return.");
                 return;
+            }
             TimeSpan delay;
             float startDelay = Plugin.config.SongStartDelay;
             if (startDelay > 0)
@@ -65,7 +71,7 @@ namespace OBSControl.HarmonyPatches
                         IsWaiting = false;
                         return true;
                     }
-                    if (recordingController.OutputState == OBSWebsocketDotNet.Types.OutputState.Started)
+                    if (recordingController.OutputState == OutputState.Started)
                     {
                         if (delay > TimeSpan.Zero)
                         {

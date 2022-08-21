@@ -1,8 +1,5 @@
-﻿using OBSWebsocketDotNet;
+﻿using ObsStrawket;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -26,7 +23,7 @@ namespace OBSControl.OBSComponents
                 if (_obs != null)
                 {
                     RemoveEvents(_obs);
-                    OBSWebsocket? websocket = _obs.Obs;
+                    ObsClientSocket? websocket = _obs.Obs;
                     if (websocket != null)
                         RemoveEvents(websocket);
                 }
@@ -34,7 +31,7 @@ namespace OBSControl.OBSComponents
                 if (value != null)
                 {
                     SetEvents(value);
-                    OBSWebsocket? websocket = value.Obs;
+                    ObsClientSocket? websocket = value.Obs;
                     if (websocket != null)
                     {
                         RemoveEvents(websocket);
@@ -128,16 +125,16 @@ namespace OBSControl.OBSComponents
             obs.ObsCreated += OnObsCreated;
             obs.DestroyingObs += OnDestroyingObs;
         }
-        protected abstract void SetEvents(OBSWebsocket obs);
+        protected abstract void SetEvents(ObsClientSocket obs);
         protected virtual void RemoveEvents(OBSController obs)
         {
             obs.ConnectionStateChanged -= ConnectionStateChanged;
             obs.ObsCreated -= OnObsCreated;
             obs.DestroyingObs -= OnDestroyingObs;
         }
-        protected abstract void RemoveEvents(OBSWebsocket obs);
+        protected abstract void RemoveEvents(ObsClientSocket obs);
 
-        protected virtual void OnObsCreated(object sender, OBSWebsocket obs)
+        protected virtual void OnObsCreated(object sender, ObsClientSocket obs)
         {
 #if DEBUG
             Logger.log?.Debug($"{GetType().Name}: OnObsCreated.");
@@ -147,7 +144,7 @@ namespace OBSControl.OBSComponents
             // TODO: What was this going to be for?
             //try
             //{
-                
+
             //}
             //catch (Exception ex)
             //{
@@ -155,7 +152,7 @@ namespace OBSControl.OBSComponents
             //}
         }
 
-        protected virtual void OnDestroyingObs(object sender, OBSWebsocket obs)
+        protected virtual void OnDestroyingObs(object sender, ObsClientSocket obs)
         {
 #if DEBUG
             Logger.log?.Debug($"{GetType().Name}: OnDestroyingObs.");
@@ -193,8 +190,9 @@ namespace OBSControl.OBSComponents
             Logger.log?.Debug($"{GetType().Name}: OnDisconnect.");
 #endif
             CancelAll();
-            gameObject.SetActive(false);
-            enabled = false;
+            // Why did this work with the following?
+            //gameObject.SetActive(false);
+            //enabled = false;
             Connected = false;
         }
 

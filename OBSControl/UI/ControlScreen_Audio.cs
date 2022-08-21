@@ -7,8 +7,7 @@ using BeatSaberMarkupLanguage.Components;
 using BeatSaberMarkupLanguage.ViewControllers;
 using OBSControl.OBSComponents;
 using OBSControl.UI.Formatters;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
+using ObsStrawket;
 using UnityEngine;
 #nullable enable
 

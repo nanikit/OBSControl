@@ -1,0 +1,5 @@
+ObsStrawket\.DataTypes\..*
+MessagePack\..*
+System\.ReadOnlySpan.*
+System\.Memory.*
+OBSControl\..*

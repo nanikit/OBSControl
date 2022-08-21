@@ -1,17 +1,13 @@
-﻿using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web.UI;
-using BeatSaberMarkupLanguage.Attributes;
+﻿using BeatSaberMarkupLanguage.Attributes;
 using BeatSaberMarkupLanguage.Components;
 using BeatSaberMarkupLanguage.ViewControllers;
-using HMUI;
 using OBSControl.OBSComponents;
 using OBSControl.UI.Formatters;
-using UnityEngine;
-using UnityEngine.UI;
+using ObsStrawket.DataTypes.Predefineds;
+using System;
+using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 #nullable enable
 
 namespace OBSControl.UI
@@ -23,6 +19,7 @@ namespace OBSControl.UI
         private string _connectionState = "Disconnected";
         internal ControlScreenCoordinator? ParentCoordinator;
         private OBSController? _obsController;
+        private CancellationTokenSource? _cancellation;
         protected OBSController OBSController
         {
             get => _obsController ??= OBSController.instance!;
@@ -69,7 +66,6 @@ namespace OBSControl.UI
             RemoveEvents(obs);
             SetComponents(obs);
             obs.ConnectionStateChanged += OnConnectionStateChanged;
-            obs.Heartbeat += OnHeartbeat;
             obs.RecordingStateChanged += OnRecordingStateChanged;
             obs.StreamingStateChanged += OnStreamingStateChanged;
             obs.StreamStatus += OnStreamStatus;
@@ -77,6 +73,23 @@ namespace OBSControl.UI
             if (SceneController != null)
             {
                 SceneController.SceneChanged += OnSceneChange;
+            }
+            _cancellation = new();
+            //_ = Task.Run(() => GetStatsIntervalAsync(obs));
+        }
+
+        private async Task GetStatsIntervalAsync(OBSController controller)
+        {
+            var token = _cancellation!.Token;
+            while (!token.IsCancellationRequested)
+            {
+                var obs = controller.Obs;
+                if (obs != null)
+                {
+                    var stats = await obs.GetStatsAsync(cancellation: token).ConfigureAwait(false);
+                    OnHeartbeat(stats);
+                    await Task.Delay(2000, token).ConfigureAwait(false);
+                }
             }
         }
 
@@ -91,9 +104,12 @@ namespace OBSControl.UI
 
         protected void RemoveEvents(OBSController obs)
         {
+            _cancellation?.Cancel();
+            _cancellation?.Dispose();
+            _cancellation = null;
+
             if (obs == null) return;
             obs.ConnectionStateChanged -= OnConnectionStateChanged;
-            obs.Heartbeat -= OnHeartbeat;
             obs.RecordingStateChanged -= OnRecordingStateChanged;
             obs.StreamingStateChanged -= OnStreamingStateChanged;
             obs.StreamStatus -= OnStreamStatus;
@@ -132,15 +148,15 @@ namespace OBSControl.UI
             CurrentScene = sceneName ?? string.Empty;
         }
 
-        private void OnHeartbeat(object sender, OBSWebsocketDotNet.HeartBeatEventArgs e)
+        private void OnHeartbeat(GetStatsResponse e)
         {
-            IsRecording = e.Recording;
-            IsStreaming = e.Streaming;
-            RenderTotalFrames = e.Stats.RenderTotalFrames;
-            RenderMissedFrames = e.Stats.RenderMissedFrames;
-            OutputTotalFrames = e.Stats.OutputTotalFrames;
-            OutputSkippedFrames = e.Stats.OutputSkippedFrames;
-            FreeDiskSpace = e.Stats.FreeDiskSpace;
+            //IsRecording = e.Recording;
+            //IsStreaming = e.Streaming;
+            RenderTotalFrames = e.RenderTotalFrames;
+            RenderMissedFrames = e.RenderSkippedFrames;
+            OutputTotalFrames = e.OutputTotalFrames;
+            OutputSkippedFrames = e.OutputSkippedFrames;
+            FreeDiskSpace = e.AvailableDiskSpace;
         }
 
         private int _renderMissedFramesOffset;
@@ -233,6 +249,7 @@ namespace OBSControl.UI
             get => _connectButtonInteractable;
             set
             {
+                Logger.log?.Debug($"ConnectButtonInteractable: {_connectButtonInteractable} -> {value}");
                 if (_connectButtonInteractable == value) return;
                 _connectButtonInteractable = value;
                 NotifyPropertyChanged();
@@ -355,35 +372,26 @@ namespace OBSControl.UI
         [UIAction(nameof(ConnectButtonClicked))]
         public async void ConnectButtonClicked()
         {
-            ConnectButtonInteractable = false;
             OBSController? controller = OBSController.instance ?? throw new InvalidOperationException("OBSController does not exist.");
             if (controller != null && controller.Obs != null)
             {
                 try
                 {
                     if (IsConnected)
-                        controller.Obs.Disconnect();
+                        await controller.Obs.CloseAsync();
                     else
                         await controller.TryConnect(CancellationToken.None);
                 }
-#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)
                 {
                     Logger.log?.Warn($"Error {(IsConnected ? "disconnecting from " : "connecting to ")} OBS: {ex.Message}");
                     Logger.log?.Debug(ex);
-                }
-#pragma warning restore CA1031 // Do not catch general exception types
-                finally
-                {
-                    await Task.Delay(2000);
-                    ConnectButtonInteractable = true;
                 }
             }
             else
             {
                 Logger.log?.Warn($"Cannot connect to OBS: {(controller == null ? "OBSController" : "OBS Websocket")} is null.");
                 await Task.Delay(2000);
-                ConnectButtonInteractable = true;
             }
         }
 

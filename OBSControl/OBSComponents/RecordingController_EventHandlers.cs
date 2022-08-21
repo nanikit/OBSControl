@@ -2,13 +2,10 @@
 using OBSControl.HarmonyPatches;
 using OBSControl.UI;
 using OBSControl.Wrappers;
-using OBSWebsocketDotNet;
-using OBSWebsocketDotNet.Types;
+using ObsStrawket.DataTypes;
+using ObsStrawket.DataTypes.Predefineds;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine.SceneManagement;
@@ -230,109 +227,64 @@ namespace OBSControl.OBSComponents
 
         #region OBS Event Handlers
 
-        private async Task<string?> GetRecordingFileName()
+        private async void OnObsRecordingStateChanged(object sender, RecordStateChanged changed)
         {
-            OBSWebsocket? obs = Obs.GetConnectedObs();
-            if (obs != null)
+            try
             {
-                try
+                var type = changed.OutputState;
+                Logger.log?.Info($"Recording State Changed: {type}");
+                OutputState = type;
+                LastRecordingStateUpdate = DateTime.Now;
+                switch (type)
                 {
-                    FileOutputInfo? output = (FileOutputInfo?)(await obs.ListOutputs().ConfigureAwait(false)).FirstOrDefault(o => o is FileOutputInfo);
-                    if (output != null)
-                    {
-                        Logger.log?.Debug($"Got FileOutput from OBS: {output.Name} | '{output.Settings.Path}'");
-                        string? path = output?.Settings.Path;
-                        if (!string.IsNullOrEmpty(path))
+                    case OutputState.Starting:
+                        recordingCurrentLevel = true;
+                        break;
+                    case OutputState.Started:
+                        RecordStartTime = DateTime.UtcNow;
+                        recordingCurrentLevel = true;
+                        if (RecordStartSource == RecordActionSourceType.None)
                         {
-                            return Path.GetFileName(path);
+                            RecordStartSource = RecordActionSourceType.ManualOBS;
+                            RecordStopOption recordStopOption = Plugin.config?.RecordStopOption ?? RecordStopOption.None;
+                            RecordStopOption = recordStopOption == RecordStopOption.SceneSequence ? RecordStopOption.ResultsView : recordStopOption;
                         }
-                    }
-                    else
-                        Logger.log?.Warn($"Could not get file output from OBS.");
-                }
-                catch (Exception ex)
-                {
-                    Logger.log?.Error($"Error getting current recording file name: {ex.Message}.");
-                    Logger.log?.Debug(ex);
+                        RecordStopCancellationSource = new CancellationTokenSource();
+                        break;
+                    case OutputState.Stopping:
+                        recordingCurrentLevel = false;
+                        break;
+                    case OutputState.Stopped:
+                        recordingCurrentLevel = false;
+                        RecordStartTime = DateTime.MaxValue;
+                        RecordingData? lastLevelData = LastLevelData;
+                        string? renameOverride = RenameStringOverride;
+                        RenameStringOverride = null;
+                        LastLevelData = null;
+                        RecordStartSource = RecordActionSourceType.None;
+                        // RecordStartOption = RecordStartOption.None;
+                        string? renameString = renameOverride ??
+                            lastLevelData?.GetFilenameString(Plugin.config.RecordingFileFormat, Plugin.config.InvalidCharacterSubstitute, Plugin.config.ReplaceSpacesWith);
+                        if (renameString != null)
+                        {
+                            string newName = $"{renameString}{Path.GetExtension(changed.OutputPath)}";
+                            string formatted = Path.Combine(Path.GetDirectoryName(changed.OutputPath), newName);
+                            File.Move(changed.OutputPath, formatted);
+                        }
+                        else
+                        {
+                            Logger.log?.Info("No data to rename the recording file.");
+                            CurrentFileFormat = null;
+                        }
+                        break;
+                    default:
+                        Logger.log?.Debug($"Unknown type: {type}");
+                        break;
                 }
             }
-            return null;
-        }
-
-        private async void OnObsRecordingStateChanged(object sender, OutputState type)
-        {
-            Logger.log?.Info($"Recording State Changed: {type}");
-            OutputState = type;
-            LastRecordingStateUpdate = DateTime.Now;
-            switch (type)
+            catch (Exception ex)
             {
-                case OutputState.Starting:
-                    recordingCurrentLevel = true;
-                    break;
-                case OutputState.Started:
-                    RecordStartTime = DateTime.UtcNow;
-                    recordingCurrentLevel = true;
-                    if (RecordStartSource == RecordActionSourceType.None)
-                    {
-                        RecordStartSource = RecordActionSourceType.ManualOBS;
-                        RecordStopOption recordStopOption = Plugin.config?.RecordStopOption ?? RecordStopOption.None;
-                        RecordStopOption = recordStopOption == RecordStopOption.SceneSequence ? RecordStopOption.ResultsView : recordStopOption;
-                    }
-                    RecordStopCancellationSource = new CancellationTokenSource();
-                    OBSWebsocket? obs = Obs.GetConnectedObs();
-                    if (obs != null)
-                    {
-                        try
-                        {
-                            await obs.SetFilenameFormatting(DefaultFileFormat).ConfigureAwait(false);
-                        }
-                        catch (Exception ex)
-                        {
-
-                            Logger.log?.Error($"Error setting default filename formatting: {ex.Message}.");
-                            Logger.log?.Debug(ex);
-                        }
-                        if (string.IsNullOrEmpty(CurrentFileFormat))
-                        {
-                            string? path = await GetRecordingFileName().ConfigureAwait(false);
-                            if (path != null)
-                            {
-                                if (string.IsNullOrEmpty(CurrentFileFormat))
-                                {
-                                    CurrentFileFormat = path;
-                                    Logger.log?.Info($"Got currently recording filename from OBS: {path}");
-                                }
-                            }
-                            else
-                                Logger.log?.Warn($"CurrentFileFormat is null, unable to get the filename from OBS");
-                        }
-
-                    }
-                    break;
-                case OutputState.Stopping:
-                    recordingCurrentLevel = false;
-                    break;
-                case OutputState.Stopped:
-                    recordingCurrentLevel = false;
-                    RecordStartTime = DateTime.MaxValue;
-                    RecordingData? lastLevelData = LastLevelData;
-                    string? renameOverride = RenameStringOverride;
-                    RenameStringOverride = null;
-                    LastLevelData = null;
-                    RecordStartSource = RecordActionSourceType.None;
-                    // RecordStartOption = RecordStartOption.None;
-                    string? renameString = renameOverride ??
-                        lastLevelData?.GetFilenameString(Plugin.config.RecordingFileFormat, Plugin.config.InvalidCharacterSubstitute, Plugin.config.ReplaceSpacesWith);
-                    if (renameString != null)
-                        RenameLastRecording(renameString);
-                    else
-                    {
-                        Logger.log?.Info("No data to rename the recording file.");
-                        CurrentFileFormat = null;
-                    }
-                    break;
-                default:
-                    break;
+                Logger.log?.Error(ex);
             }
         }
 

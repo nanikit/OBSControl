@@ -1,6 +1,6 @@
 ﻿using CSCore.CoreAudioAPI;
-using Newtonsoft.Json.Linq;
-using OBSWebsocketDotNet;
+using ObsStrawket;
+using ObsStrawket.DataTypes.Predefineds;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +12,14 @@ namespace OBSControl.OBSComponents
 {
     public class AudioDevicesController : OBSComponent
     {
-        public static List<string> obsOutputSourceKeys = new List<string>{
-            "desktop-1", "desktop-2"
+        public static List<string> obsOutputSourceKeys = new() {
+            nameof(GetSpecialInputsResponse.Desktop1), nameof(GetSpecialInputsResponse.Desktop2)
         };
-        public static List<string> obsInputSourceKeys = new List<string>{
-            "mic-1", "mic-2", "mic-3", "mic-4"
+        public static List<string> obsInputSourceKeys = new() {
+            nameof(GetSpecialInputsResponse.Mic1),
+            nameof(GetSpecialInputsResponse.Mic2),
+            nameof(GetSpecialInputsResponse.Mic3),
+            nameof(GetSpecialInputsResponse.Mic4),
         };
         // Devices available to the system (as returned by NAudio)
         private MMDevice? systemDefaultOutputDevice;
@@ -41,12 +44,12 @@ namespace OBSControl.OBSComponents
             PluginConfig? conf = Plugin.config;
             return sourceKey switch
             {
-                "desktop-1" => conf.ObsDesktopAudio1,
-                "desktop-2" => conf.ObsDesktopAudio2,
-                "mic-1" => conf.ObsMicAux1,
-                "mic-2" => conf.ObsMicAux2,
-                "mic-3" => conf.ObsMicAux3,
-                "mic-4" => conf.ObsMicAux4,
+                nameof(GetSpecialInputsResponse.Desktop1) => conf.ObsDesktopAudio1,
+                nameof(GetSpecialInputsResponse.Desktop2) => conf.ObsDesktopAudio2,
+                nameof(GetSpecialInputsResponse.Mic1) => conf.ObsMicAux1,
+                nameof(GetSpecialInputsResponse.Mic2) => conf.ObsMicAux2,
+                nameof(GetSpecialInputsResponse.Mic3) => conf.ObsMicAux3,
+                nameof(GetSpecialInputsResponse.Mic4) => conf.ObsMicAux4,
                 _ => null,
             };
         }
@@ -129,11 +132,11 @@ namespace OBSControl.OBSComponents
 
         private MMDevice? DefaultDeviceByKey(string sourceKey)
         {
-            if (sourceKey.StartsWith("mic"))
+            if (sourceKey.StartsWith("Mic"))
             {
                 return systemDefaultInputDevice;
             }
-            if (sourceKey.StartsWith("desktop"))
+            if (sourceKey.StartsWith("Desktop"))
             {
                 return this.systemDefaultOutputDevice;
             }
@@ -141,29 +144,37 @@ namespace OBSControl.OBSComponents
             return null;
         }
 
-        public async Task RefreshOBSDevices(OBSWebsocket obs)
+        public async Task RefreshOBSDevices(ObsClientSocket obs)
         {
             Logger.log?.Debug("|ADC| refreshOBSDevices called.");
-            Dictionary<string, string> obsSources;
+            GetSpecialInputsResponse obsSources;
 
             this.obsDevices = new Dictionary<string, MMDevice>();
             this.obsSourceNames = new Dictionary<string, string>();
             this.obsActiveSources = new HashSet<string>();
             try
             {
-                obsSources = await obs.GetSpecialSources();
+                obsSources = await obs.GetSpecialInputsAsync();
             }
             catch (Exception)
             {
                 Logger.log?.Debug("|ADC| refreshOBSDevices failed.");
                 return;
             }
-            foreach (KeyValuePair<string, string> source in obsSources)
+            var specials = new (string Key, string? Value)[] {
+              (nameof(obsSources.Mic1), obsSources.Mic1),
+              (nameof(obsSources.Mic2), obsSources.Mic2),
+              (nameof(obsSources.Mic3), obsSources.Mic3),
+              (nameof(obsSources.Mic4), obsSources.Mic4),
+              (nameof(obsSources.Desktop1), obsSources.Desktop1),
+              (nameof(obsSources.Desktop2), obsSources.Desktop2),
+            }.Where(x => x.Value != null).ToList();
+            foreach (var source in specials)
             {
                 obsActiveSources.Add(source.Key);
                 Logger.log?.Debug($"|ADC| Special device \"{source.Value}\" start");
-                OBSWebsocketDotNet.Types.SourceSettings? sourceSettings = await obs.GetSourceSettings(source.Value);
-                string? deviceID = sourceSettings.Settings.GetValue("device_id")?.ToString();
+                var sourceSettings = await obs.GetInputSettingsAsync(source.Value!);
+                string? deviceID = sourceSettings.InputSettings["device_id"]?.ToString();
                 Logger.log?.Debug($"|ADC| Device ID: \"{deviceID}\"");
                 MMDevice? device = systemInputDevices.FirstOrDefault((d) => d.DeviceID == deviceID);
                 if (device == null)
@@ -198,16 +209,18 @@ namespace OBSControl.OBSComponents
                         Logger.log?.Debug($"|ADC| Source set to default because device was missing");
                     }
                 }
+
+                sourceSettings.InputSettings.TryGetValue("sourceName", out object? sourceName);
                 if (device != null)
                 {
                     obsDevices[source.Key] = device;
                     Logger.log?.Debug($"|ADC| obsDevices[{source.Key}] = {device.FriendlyName}");
-                    obsSourceNames[source.Key] = sourceSettings.SourceName;
-                    Logger.log?.Debug($"|ADC| obsSourceNames[{source.Key}] = \"{sourceSettings.SourceName}\"");
+                    obsSourceNames[source.Key] = $"{sourceName}";
+                    Logger.log?.Debug($"|ADC| obsSourceNames[{source.Key}] = \"{sourceName}\"");
                     Logger.log?.Debug($"|ADC| Special device {source.Value} end\n");
                 }
                 else
-                    Logger.log?.Warn($"|ADC| OBS audio device {source.Key} ({sourceSettings.SourceName}) is null.");
+                    Logger.log?.Warn($"|ADC| OBS audio device {source.Key} ({sourceName}) is null.");
             }
             Logger.log?.Debug("|ADC| refreshOBSDevices finished.");
         }
@@ -259,39 +272,39 @@ namespace OBSControl.OBSComponents
             string? obsSourceName = await getSourceNameByKey(sourceKey);
             if (obsSourceName == null) return;
 
-            JObject settings = new JObject { { "device_id", "default" } };
+            //JObject settings = new JObject { { "device_id", "default" } };
 
-            try
-            {
-                OBSWebsocket? obs = Obs.GetConnectedObs();
-                if (obs == null)
-                {
-                    Logger.log?.Debug($"|ADC| obs is null");
-                }
-                else if (obs.IsConnected)
-                {
-                    await obs.SetSourceSettings(obsSourceName, settings, null);
-                    var defaultDevice = DefaultDeviceByKey(sourceKey);
-                    if (defaultDevice != null)
-                    {
-                        this.obsDevices[sourceKey] = defaultDevice;
-                        Logger.log?.Debug($"|ADC| Set \"{sourceKey}\" to \"default\"");
-                    }
-                    else
-                    {
-                        Logger.log?.Debug($"|ADC| Could not set \"{sourceKey}\" to \"default\", because default device was not found");
-                    }
-                }
-                else
-                {
-                    Logger.log?.Debug($"|ADC| obs not connected");
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.log?.Debug($"|ADC| Setting \"{sourceKey}\" to \"default\" didn't work:");
-                Logger.log?.Debug($"|ADC| {e}");
-            }
+            //try
+            //{
+            //    ObsClientSocket? obs = Obs.GetConnectedObs();
+            //    if (obs == null)
+            //    {
+            //        Logger.log?.Debug($"|ADC| obs is null");
+            //    }
+            //    else if (obs.IsConnected)
+            //    {
+            //        await obs.SetSourceSettings(obsSourceName, settings, null);
+            //        var defaultDevice = DefaultDeviceByKey(sourceKey);
+            //        if (defaultDevice != null)
+            //        {
+            //            this.obsDevices[sourceKey] = defaultDevice;
+            //            Logger.log?.Debug($"|ADC| Set \"{sourceKey}\" to \"default\"");
+            //        }
+            //        else
+            //        {
+            //            Logger.log?.Debug($"|ADC| Could not set \"{sourceKey}\" to \"default\", because default device was not found");
+            //        }
+            //    }
+            //    else
+            //    {
+            //        Logger.log?.Debug($"|ADC| obs not connected");
+            //    }
+            //}
+            //catch (Exception e)
+            //{
+            //    Logger.log?.Debug($"|ADC| Setting \"{sourceKey}\" to \"default\" didn't work:");
+            //    Logger.log?.Debug($"|ADC| {e}");
+            //}
         }
 
         public async Task SetSourceToDevice(string sourceKey, MMDevice device)
@@ -301,30 +314,30 @@ namespace OBSControl.OBSComponents
             string? obsSourceName = await getSourceNameByKey(sourceKey);
             if (obsSourceName == null) return;
 
-            JObject settings = new JObject { { "device_id", device.DeviceID } };
-            try
-            {
-                OBSWebsocket? obs = Obs.GetConnectedObs();
-                if (obs == null)
-                {
-                    Logger.log?.Debug($"|ADC| obs is null");
-                }
-                else if (obs.IsConnected)
-                {
-                    await obs.SetSourceSettings(obsSourceName, settings, null); ;
-                    this.obsDevices[sourceKey] = device;
-                    Logger.log?.Debug($"|ADC| Set \"{sourceKey}\" to \"{device.FriendlyName}\"");
-                }
-                else
-                {
-                    Logger.log?.Debug($"|ADC| obs not connected");
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.log?.Debug($"|ADC| Setting \"{sourceKey}\" to \"{device.FriendlyName}\" didn't work:");
-                Logger.log?.Debug($"|ADC| {e}");
-            }
+            //JObject settings = new JObject { { "device_id", device.DeviceID } };
+            //try
+            //{
+            //    ObsClientSocket? obs = Obs.GetConnectedObs();
+            //    if (obs == null)
+            //    {
+            //        Logger.log?.Debug($"|ADC| obs is null");
+            //    }
+            //    else if (obs.IsConnected)
+            //    {
+            //        await obs.SetSourceSettings(obsSourceName, settings, null); ;
+            //        this.obsDevices[sourceKey] = device;
+            //        Logger.log?.Debug($"|ADC| Set \"{sourceKey}\" to \"{device.FriendlyName}\"");
+            //    }
+            //    else
+            //    {
+            //        Logger.log?.Debug($"|ADC| obs not connected");
+            //    }
+            //}
+            //catch (Exception e)
+            //{
+            //    Logger.log?.Debug($"|ADC| Setting \"{sourceKey}\" to \"{device.FriendlyName}\" didn't work:");
+            //    Logger.log?.Debug($"|ADC| {e}");
+            //}
         }
 
         // public MMDevice getInputDeviceByID(string id) => this.systemInputDevices.FirstOrDefault((device) => device.DeviceID.Equals(id));
@@ -467,7 +480,7 @@ namespace OBSControl.OBSComponents
         }
         public async Task UpdateOBSDevices(bool forceCurrentUpdate = true)
         {
-            OBSWebsocket? obs = Obs.GetConnectedObs();
+            ObsClientSocket? obs = Obs.GetConnectedObs();
             if (obs == null)
             {
                 Logger.log?.Warn("|ADC| Unable get OBS devices. OBS not connected.");
@@ -540,14 +553,14 @@ namespace OBSControl.OBSComponents
             // StartLevelPatch.LevelStarting -= OnLevelStarting;
         }
 
-        protected override void SetEvents(OBSWebsocket obs)
+        protected override void SetEvents(ObsClientSocket obs)
         {
             RemoveEvents(obs);
             // obs.SceneListChanged += OnObsSceneListChanged;
             // obs.SceneChanged += OnObsSceneChanged;
         }
 
-        protected override void RemoveEvents(OBSWebsocket obs)
+        protected override void RemoveEvents(ObsClientSocket obs)
         {
             // obs.SceneListChanged -= OnObsSceneListChanged;
             // obs.SceneChanged -= OnObsSceneChanged;

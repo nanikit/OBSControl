@@ -17,9 +17,11 @@ namespace OBSControl.HarmonyPatches
         public static event EventHandler? LevelDidFinish;
         static void Postfix(SinglePlayerLevelSelectionFlowCoordinator __instance)
         {
+            Logger.log?.Trace($"{nameof(HandleStandardLevelDidFinishPatch)}.Postfix: entered.");
             // Does not trigger in Multiplayer
             SinglePlayerLevelSelectionFlowCoordinator flowCoordinator = __instance;
             LevelDidFinish.RaiseEventSafe(flowCoordinator, nameof(LevelDidFinish));
+            Logger.log?.Trace($"{nameof(HandleStandardLevelDidFinishPatch)}.Postfix: exit.");
         }
     }
 }
