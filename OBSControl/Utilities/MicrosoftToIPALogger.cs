@@ -47,8 +47,7 @@ namespace OBSControl.Utilities
                 _ => IPALogger.Level.Warning,
             };
 
-            _builder ??= new();
-            var builder = _builder;
+            var builder = _builder ??= new();
             _scopeProvider.ForEachScope((o, s) =>
             {
                 builder.Append(o);

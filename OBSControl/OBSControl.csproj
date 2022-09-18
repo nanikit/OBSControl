@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Library</OutputType>
@@ -178,6 +178,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="ObsStrawket" Version="0.5.0-alpha" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Icons\lock.png" />
@@ -192,9 +193,6 @@
 	<ItemGroup>
 		<EmbeddedResource Include="Icons\reset.png" />
 		<None Include="Icons\reset.svg" />
-	</ItemGroup>
-	<ItemGroup>
-		<ProjectReference Include="..\ObsStrawket\ObsStrawket.csproj" />
 	</ItemGroup>
 	<Target Name="PreBuild" BeforeTargets="BeforeBuild" Condition="'$(NCRUNCH)' != '1'">
 		<Error Text="The BeatSaberModdingTools.Tasks nuget package doesn't seem to be installed." Condition="'$(BSMTTaskAssembly)' == ''" />

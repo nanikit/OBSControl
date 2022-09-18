@@ -413,8 +413,8 @@ namespace OBSControl.OBSComponents
             }
             try
             {
-                var outputList = (await obs.GetOutputListAsync(cancellation: cancellationToken).ConfigureAwait(false))?.Outputs;
-                if (outputList == null || outputList.Count == 0)
+                var outputList = (await obs.GetOutputListAsync(cancellation: cancellationToken).ConfigureAwait(false)).Outputs;
+                if (outputList.Count == 0)
                     Logger.log?.Warn("No Outputs listed");
                 return outputList?.ToArray() ?? Array.Empty<Output>();
             }
