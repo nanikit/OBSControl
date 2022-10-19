@@ -2,6 +2,7 @@
 using OBSControl.HarmonyPatches;
 using OBSControl.UI;
 using OBSControl.Wrappers;
+using ObsStrawket;
 using ObsStrawket.DataTypes;
 using ObsStrawket.DataTypes.Predefineds;
 using System;
@@ -213,13 +214,44 @@ namespace OBSControl.OBSComponents
             {
                 await Task.Delay(stopDelay, RecordStopCancellationSource.Token).ConfigureAwait(false);
             }
-            await TryStopRecordingAsync(RecordStopCancellationSource.Token).ConfigureAwait(false);
 
             if (ControlScreenCoordinator.Instance?.ControlScreen?.EnableAutoRecordLobby == true)
             {
-                await TryStartRecordingAsync(RecordActionSourceType.Auto, RecordStartOption.None, true).ConfigureAwait(false);
-                RenameStringOverride = $"Lobby {DateTime.Now:yyMMdd HHmmss}";
+                //await TryStartRecordingAsync(RecordActionSourceType.Auto, RecordStartOption.None, true).ConfigureAwait(false);
+                if (GetObs() is ObsClientSocket obs)
+                {
+                    void SetLobbyFileName(RecordStateChanged changed)
+                    {
+                        if (changed.OutputState == OutputState.Started)
+                        {
+                            RenameStringOverride = $"Lobby {DateTime.Now:yyMMdd HHmmss}";
+                            obs.RecordStateChanged -= SetLobbyFileName;
+                        }
+                    }
+                    obs.RecordStateChanged += SetLobbyFileName;
+                    await SplitFile(obs).ConfigureAwait(false);
+                }
             }
+            else
+            {
+                await TryStopRecordingAsync(RecordStopCancellationSource.Token).ConfigureAwait(false);
+            }
+        }
+
+        private static async Task SplitFile(ObsClientSocket obs)
+        {
+            await obs.TriggerHotkeyByNameAsync("OBSBasic.SplitFile").ConfigureAwait(false);
+        }
+
+        private ObsClientSocket? GetObs()
+        {
+            var obs = Obs.GetConnectedObs();
+            if (obs == null)
+            {
+                Logger.log?.Error($"obs instance not found.");
+                return null;
+            }
+            return obs;
         }
 
         #endregion
@@ -243,12 +275,12 @@ namespace OBSControl.OBSComponents
                     case OutputState.Started:
                         RecordStartTime = DateTime.UtcNow;
                         recordingCurrentLevel = true;
-                        if (RecordStartSource == RecordActionSourceType.None)
-                        {
-                            RecordStartSource = RecordActionSourceType.ManualOBS;
-                            RecordStopOption recordStopOption = Plugin.config?.RecordStopOption ?? RecordStopOption.None;
-                            RecordStopOption = recordStopOption == RecordStopOption.SceneSequence ? RecordStopOption.ResultsView : recordStopOption;
-                        }
+                        //if (RecordStartSource == RecordActionSourceType.None)
+                        //{
+                        //    RecordStartSource = RecordActionSourceType.ManualOBS;
+                        //    RecordStopOption recordStopOption = Plugin.config?.RecordStopOption ?? RecordStopOption.None;
+                        //    RecordStopOption = recordStopOption == RecordStopOption.SceneSequence ? RecordStopOption.ResultsView : recordStopOption;
+                        //}
                         RecordStopCancellationSource = new CancellationTokenSource();
                         break;
                     case OutputState.Stopping:
@@ -261,15 +293,39 @@ namespace OBSControl.OBSComponents
                         string? renameOverride = RenameStringOverride;
                         RenameStringOverride = null;
                         LastLevelData = null;
-                        RecordStartSource = RecordActionSourceType.None;
+                        //RecordStartSource = RecordActionSourceType.None;
                         // RecordStartOption = RecordStartOption.None;
                         string? renameString = renameOverride ??
                             lastLevelData?.GetFilenameString(Plugin.config.RecordingFileFormat, Plugin.config.InvalidCharacterSubstitute, Plugin.config.ReplaceSpacesWith);
                         if (renameString != null)
                         {
                             string newName = $"{renameString}{Path.GetExtension(changed.OutputPath)}";
-                            string formatted = Path.Combine(Path.GetDirectoryName(changed.OutputPath), newName);
-                            File.Move(changed.OutputPath, formatted);
+                            for (int i = 0; i < 5; i++)
+                            {
+                                try
+                                {
+                                    string formatted = Path.Combine(Path.GetDirectoryName(changed.OutputPath), newName);
+                                    File.Move(changed.OutputPath, formatted);
+                                    break;
+                                }
+                                catch (IOException ex) when (ex.Message.Contains("Sharing violation"))
+                                {
+                                    if (i == 4)
+                                    {
+                                        Logger.log?.Warn($"Renaming {changed.OutputPath} to {newName} failed. Don't try more: {ex}");
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        Logger.log?.Info($"Renaming {changed.OutputPath} to {newName} failed. Retry after a moment...");
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Logger.log?.Warn($"Renaming {changed.OutputPath} to {newName} failed: {ex}");
+                                }
+                                await Task.Delay(2000).ConfigureAwait(false);
+                            }
                         }
                         else
                         {

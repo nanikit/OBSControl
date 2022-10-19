@@ -202,8 +202,6 @@ namespace OBSControl.OBSComponents
         {
             Logger.log?.Debug($"TryStartRecordingAsync");
 
-
-
             ObsClientSocket? obs = Obs.GetConnectedObs();
             if (obs == null)
             {
@@ -215,7 +213,16 @@ namespace OBSControl.OBSComponents
             {
                 if (forceStopPrevious)
                 {
-                    await TryStopRecordingAsync(CancellationToken.None).ConfigureAwait(false);
+                    //await TryStopRecordingAsync(CancellationToken.None).ConfigureAwait(false);
+                    await SplitFile(obs).ConfigureAwait(false);
+                    RecordStartSource = startType;
+                    RecordStopOption = recordStartOption switch
+                    {
+                        RecordStartOption.SceneSequence => RecordStopOption.SceneSequence,
+                        _ => Plugin.config?.RecordStopOption ?? RecordStopOption.ResultsView
+                    };
+                    Logger.log?.Info($"Recording started.");
+                    return;
                 }
                 else
                 {
