@@ -148,6 +148,16 @@
 			<Private>False</Private>
 			<SpecificVersion>False</SpecificVersion>
 		</Reference>
+		<Reference Include="Zenject">
+			<HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\Zenject.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
+		<Reference Include="Zenject-usage">
+			<HintPath>$(BeatSaberDir)\Beat Saber_Data\Managed\Zenject-usage.dll</HintPath>
+			<Private>False</Private>
+			<SpecificVersion>False</SpecificVersion>
+		</Reference>
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="manifest.json" />
@@ -174,11 +184,11 @@
 			<Version>1.2.1.2</Version>
 		</PackageReference>
 		<PackageReference Include="ILRepack" Version="2.1.0-beta1" GeneratePathProperty="true" />
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="ObsStrawket" Version="0.5.0-alpha" />
+		<PackageReference Include="ObsStrawket" Version="0.11.0-beta" />
 	</ItemGroup>
 	<ItemGroup>
 		<EmbeddedResource Include="Icons\lock.png" />
@@ -215,6 +225,6 @@
 		<Message Text="Version $(InformationalVersion)" Importance="high" />
 	</Target>
 	<Target Name="ILRepacker" BeforeTargets="BSMT_AfterBuild">
-		<Exec WorkingDirectory="$(TargetDir)" Command="$(PkgILRepack)\tools\ILRepack.exe /copyattrs &quot;/internalize:$(ProjectDir)exclude.txt&quot; &quot;/out:$(TargetFileName)&quot; $(TargetFileName) CSCore.dll Microsoft.NET.StringTools.dll System.Buffers.dll System.Memory.dll System.Runtime.CompilerServices.Unsafe.dll System.Threading.Tasks.Extensions.dll Nerdbank.Streams.dll MessagePack.dll MessagePack.Annotations.dll ObsStrawket.dll Microsoft.Bcl.AsyncInterfaces.dll System.Collections.Immutable.dll Microsoft.VisualStudio.Validation.dll System.IO.Pipelines.dll Microsoft.VisualStudio.Threading.dll System.Threading.Channels.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.Lightweight.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.ILGeneration.dll Microsoft.Extensions.Logging.Abstractions.dll" />
+		<Exec WorkingDirectory="$(TargetDir)" Command="$(PkgILRepack)\tools\ILRepack.exe /copyattrs &quot;/internalize:$(ProjectDir)exclude.txt&quot; &quot;/out:$(TargetFileName)&quot; $(TargetFileName) CSCore.dll Microsoft.NET.StringTools.dll System.Buffers.dll System.Memory.dll System.Runtime.CompilerServices.Unsafe.dll System.Threading.Tasks.Extensions.dll MessagePack.dll MessagePack.Annotations.dll ObsStrawket.dll Microsoft.Bcl.AsyncInterfaces.dll System.Collections.Immutable.dll System.IO.Pipelines.dll System.Threading.Channels.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.Lightweight.dll C:\Windows\Microsoft.NET\Framework\v4.0.30319\System.Reflection.Emit.ILGeneration.dll Microsoft.Extensions.Logging.Abstractions.dll" />
 	</Target>
 </Project>

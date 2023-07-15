@@ -14,6 +14,8 @@ using OBSControl.OBSComponents;
 using IPALogger = IPA.Logging.Logger;
 using BeatSaberMarkupLanguage.Settings;
 using OBSControl.UI;
+using Zenject;
+using OBSControl.Utilities;
 #nullable enable
 namespace OBSControl
 {
@@ -26,6 +28,7 @@ namespace OBSControl
 #pragma warning restore CS8618 // Non-nullable field is uninitialized. Consider declaring as nullable.
         internal static string Name => "OBSControl";
         internal static bool Enabled;
+        private readonly DiContainer container = new();
 
         [Init]
         public void Init(IPALogger logger, Config conf)
@@ -55,7 +58,9 @@ namespace OBSControl
         {
             //config.Value.FillDefaults();
             Logger.log?.Debug("OnEnable()");
-            new GameObject("OBSControl_OBSController").AddComponent<OBSController>();
+            var controller = new GameObject("OBSControl_OBSController").AddComponent<OBSController>();
+            container.BindInterfacesAndSelfTo<MicrosoftToIPALogger>().FromInstance(new MicrosoftToIPALogger(Logger.log!));
+            container.BindInstance(controller).AsSingle();
 
             ApplyHarmonyPatches();
             Enabled = true;
@@ -153,6 +158,8 @@ namespace OBSControl
             Logger.log?.Debug("OnDisable()");
             RemoveHarmonyPatches();
             GameObject.Destroy(OBSController.instance?.gameObject);
+            container.UnbindAll();
+
             Enabled = false;
         }
         #endregion
