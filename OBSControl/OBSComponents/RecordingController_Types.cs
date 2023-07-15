@@ -1,9 +1,13 @@
-﻿using OBSControl.Wrappers;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using OBSControl.Wrappers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using UnityEngine.Networking;
 #nullable enable
 
 namespace OBSControl.OBSComponents
@@ -107,6 +111,9 @@ namespace OBSControl.OBSComponents
             public BeatmapLevelWrapper LevelData;
             public PlayerLevelStatsData? PlayerLevelStats;
             public LevelCompletionResultsWrapper? LevelResults;
+
+            public string? BeatSaverKey { get; set; }
+
             public RecordingData(BeatmapLevelWrapper levelData, PlayerLevelStatsData? playerLevelStats = null)
             {
                 LevelData = levelData;
@@ -118,7 +125,17 @@ namespace OBSControl.OBSComponents
                 LevelData = levelData;
                 PlayerLevelStats = playerLevelStats;
             }
-            public string? GetFilenameString(string? fileFormat, string? invalidSubstitute, string? spaceReplacement)
+
+            public async Task<string?> GetFileName(string? fileFormat, string? invalidSubstitute, string? spaceReplacement)
+            {
+                if (fileFormat?.Contains("?k") == true)
+                {
+                    await PrepareBeatSaverInformation().ConfigureAwait(false);
+                }
+                return GetFilenameString(fileFormat, invalidSubstitute, spaceReplacement);
+            }
+
+            private string? GetFilenameString(string? fileFormat, string? invalidSubstitute, string? spaceReplacement)
             {
                 // TODO: Handle MultipleLastLevels?
                 if (LevelData == null)
@@ -127,8 +144,41 @@ namespace OBSControl.OBSComponents
                         LevelData,
                         LevelResults,
                         invalidSubstitute,
-                        spaceReplacement);
+                        spaceReplacement,
+                        BeatSaverKey);
             }
+
+            private async Task PrepareBeatSaverInformation()
+            {
+                if (BeatSaverKey != null)
+                {
+                    return;
+                }
+
+                var match = Regex.Match(LevelData.LevelID, @"custom_level_([0-9a-f]{40})", RegexOptions.IgnoreCase);
+                Logger.log?.Info($"match: {match.Success} {LevelData.LevelID}");
+                if (!match.Success)
+                {
+                    return;
+                }
+
+                var hash = match.Groups[1];
+                var request = UnityWebRequest.Get($"https://beatsaver.com/api/maps/hash/{hash}");
+                var operation = request.SendWebRequest();
+                var source = new TaskCompletionSource<string>();
+                operation.completed += (_) => source.TrySetResult(request.downloadHandler.text);
+                string json = await source.Task.ConfigureAwait(false);
+                Logger.log?.Info($"request error: {request.isNetworkError} {request.isHttpError}");
+                if (request.isNetworkError || request.isHttpError)
+                {
+                    return;
+                }
+
+                string? id = JObject.Parse(json)["id"]?.Value<string>();
+                BeatSaverKey = id;
+                Logger.log?.Info($"BeatSaverKey: {id}");
+            }
+
         }
 
         public struct RecordingSettings

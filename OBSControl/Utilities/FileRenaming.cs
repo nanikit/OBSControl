@@ -1,13 +1,9 @@
-﻿using System;
+﻿using OBSControl.Wrappers;
+using System;
 using System.Collections.Generic;
-using OBSControl.Wrappers;
-using OBSControl.Utilities;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
 using System.Collections.ObjectModel;
-using UnityEngine;
+using System.Text;
+
 #nullable enable
 namespace OBSControl.Utilities
 {
@@ -29,6 +25,7 @@ namespace OBSControl.Utilities
             {'N', LevelDataType.SongName },
             {'n', LevelDataType.SongSubName },
             {'@', LevelDataType.Date },
+            {'k', LevelDataType.BeatSaverKey },
             //------CompletionResults----------
             {'1', LevelDataType.FirstPlay },
             {'b', LevelDataType.BadCutsCount },
@@ -78,7 +75,8 @@ namespace OBSControl.Utilities
             ModifiedScore,
             Rank,
             RawScore,
-            ScorePercent
+            ScorePercent,
+            BeatSaverKey,
         }
 
         public static string GetDifficultyName(Difficulty difficulty, bool shortName = false)
@@ -97,7 +95,7 @@ namespace OBSControl.Utilities
         }
 
         public static string GetLevelDataString(LevelDataType levelDataType, ILevelData levelData,
-            ILevelCompletionResults? levelCompletionResults, string? data = null)
+            ILevelCompletionResults? levelCompletionResults, string? data = null, string? beatSaverKey = null)
         {
             string? retVal = null;
             switch (levelDataType)
@@ -214,6 +212,8 @@ namespace OBSControl.Utilities
                     if (levelCompletionResults == null) return string.Empty;
                     string scoreStr = levelCompletionResults.ScorePercent.ToString("F3");
                     return scoreStr.Substring(0, scoreStr.Length - 1); // Game rounds down
+                case LevelDataType.BeatSaverKey:
+                    return beatSaverKey ?? "";
                 default:
                     return "NA";
             }
@@ -228,7 +228,7 @@ namespace OBSControl.Utilities
         /// <returns></returns>
         /// <exception cref="ArgumentNullException">Thrown if <paramref name="difficultyBeatmap"/> or <paramref name="levelCompletionResults"/> is null.</exception>
         public static string GetFilenameString(string? baseString, ILevelData levelData, ILevelCompletionResults? levelCompletionResults,
-            string? invalidSubstitute = "", string? spaceReplacement = null)
+            string? invalidSubstitute = "", string? spaceReplacement = null, string? beatSaverKey = null)
         {
             if (levelData == null)
                 throw new ArgumentNullException(nameof(levelData), "difficultyBeatmap cannot be null for GetFilenameString.");
@@ -280,7 +280,7 @@ namespace OBSControl.Utilities
                                 string data;
                                 try
                                 {
-                                    data = GetLevelDataString(LevelDataSubstitutions[ch], levelData, levelCompletionResults, dataString);
+                                    data = GetLevelDataString(LevelDataSubstitutions[ch], levelData, levelCompletionResults, dataString, beatSaverKey);
                                 }
                                 catch
                                 {
@@ -296,7 +296,7 @@ namespace OBSControl.Utilities
                             {
                                 try
                                 {
-                                    stringBuilder.Append(GetLevelDataString(LevelDataSubstitutions[ch], levelData, levelCompletionResults, dataString));
+                                    stringBuilder.Append(GetLevelDataString(LevelDataSubstitutions[ch], levelData, levelCompletionResults, dataString, beatSaverKey));
                                 }
                                 catch
                                 {

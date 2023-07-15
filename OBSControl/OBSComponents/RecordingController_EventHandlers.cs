@@ -295,8 +295,11 @@ namespace OBSControl.OBSComponents
                         LastLevelData = null;
                         //RecordStartSource = RecordActionSourceType.None;
                         // RecordStartOption = RecordStartOption.None;
-                        string? renameString = renameOverride ??
-                            lastLevelData?.GetFilenameString(Plugin.config.RecordingFileFormat, Plugin.config.InvalidCharacterSubstitute, Plugin.config.ReplaceSpacesWith);
+                        string? renameString = renameOverride;
+                        if (lastLevelData != null)
+                        {
+                            renameString ??= await lastLevelData.GetFileName(Plugin.config.RecordingFileFormat, Plugin.config.InvalidCharacterSubstitute, Plugin.config.ReplaceSpacesWith).ConfigureAwait(false);
+                        }
                         if (renameString != null)
                         {
                             string newName = $"{renameString}{Path.GetExtension(changed.OutputPath)}";
