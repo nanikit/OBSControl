@@ -5,6 +5,7 @@ using ObsStrawket.DataTypes.Predefineds;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -222,6 +223,12 @@ namespace OBSControl
                         Logger.log?.Info($"OBS {version} is connected.");
                     }
                     Logger.log?.Debug("try exit");
+                }
+                catch (WebSocketException ex)
+                {
+                    message = $"Failed to connect to server {Config.ServerAddress}: {ex.Message}.";
+                    Logger.log?.Info(message);
+                    return TryConnectResponse.Retry;
                 }
                 catch (AuthenticationFailureException)
                 {
